@@ -1,4 +1,4 @@
-name := "prmoji-scala"
+name := "scala-prmoji"
 
 version := "0.1"
 
