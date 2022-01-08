@@ -1,8 +1,12 @@
-package com.prezi.prmoji.services.slack.models
+package com.prezi.prmoji.codecs
 
 import zio.json.JsonCodec
 
-trait StringValueTypeJsonCodec[A <: { val value: String }] {
+trait ValueType {
+  val value: String
+}
+
+trait StringValueTypeJsonCodec[A <: ValueType] {
   def apply(string: String): A
 
   lazy implicit val codec: JsonCodec[A] =

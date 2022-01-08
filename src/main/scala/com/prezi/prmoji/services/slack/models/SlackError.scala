@@ -1,8 +1,8 @@
 package com.prezi.prmoji.services.slack.models
 
-sealed trait SlackError {}
+sealed trait SlackError
 
 object SlackError {
-  case class ClientError(cause: Throwable) extends SlackError
+  final case class ClientError(cause: Throwable) extends SlackError
 }
 
