@@ -7,7 +7,9 @@ scalaVersion := "2.13.7"
 libraryDependencies ++= Seq(
   "dev.zio"                     %% "zio"                          % "1.0.13",
   "dev.zio"                     %% "zio-test"                     % "1.0.13" % Test,
-  "dev.zio"                     %% "zio-json"                     % "0.2.0-M3",
+  "io.circe"                    %% "circe-core"                   % "0.14.1",
+  "io.circe"                    %% "circe-generic"                % "0.14.1",
+  "io.circe"                    %% "circe-parser"                 % "0.14.1",
   "io.d11"                      %% "zhttp"                        % "1.0.0.0-RC21",
 )
 
