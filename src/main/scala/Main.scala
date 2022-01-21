@@ -1,8 +1,7 @@
-import com.prezi.prmoji.services.slack.Slack
-import zio.ZIO
+import zio.console.putStrLn
+import zio.{App, ExitCode, URIO}
 
-object Main {
-  def main(args: Array[String]): Unit = {
-    println("Hello")
-  }
+object Main extends App {
+  override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
+    putStrLn("Hello").orDie.exitCode
 }
