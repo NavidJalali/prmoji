@@ -1,7 +1,7 @@
-import zio.console.putStrLn
-import zio.{App, ExitCode, URIO}
+import zio.Console.printLine
+import zio.{ExitCode, URIO, ZIOAppDefault}
 
-object Main extends App {
-  override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
-    putStrLn("Hello").orDie.exitCode
+object Main extends ZIOAppDefault {
+  override def run: URIO[zio.ZEnv, ExitCode] =
+    printLine("Hello").orDie.exitCode
 }
