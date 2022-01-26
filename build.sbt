@@ -4,13 +4,17 @@ version := "0.1"
 
 scalaVersion := "2.13.7"
 
+val zioVersion = "2.0.0-RC1"
+
+val zioJsonVersion = "0.3.0-RC2"
+
+val zioHttpVersion = "2.0.0-RC2"
+
 libraryDependencies ++= Seq(
-  "dev.zio"                     %% "zio"                          % "1.0.13",
-  "dev.zio"                     %% "zio-test"                     % "1.0.13" % Test,
-  "io.circe"                    %% "circe-core"                   % "0.14.1",
-  "io.circe"                    %% "circe-generic"                % "0.14.1",
-  "io.circe"                    %% "circe-parser"                 % "0.14.1",
-  "io.d11"                      %% "zhttp"                        % "1.0.0.0-RC21",
+  "dev.zio"                     %% "zio"                          % zioVersion,
+  "dev.zio"                     %% "zio-test"                     % zioVersion % Test,
+  "dev.zio"                     %% "zio-json"                     % zioJsonVersion,
+  "io.d11"                      %% "zhttp"                        % zioHttpVersion,
 )
 
 testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")

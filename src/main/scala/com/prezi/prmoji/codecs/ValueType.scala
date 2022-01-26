@@ -1,6 +1,6 @@
 package com.prezi.prmoji.codecs
 
-import io.circe.{Codec, Decoder, Encoder}
+import zio.json.JsonCodec
 
 trait ValueType {
   val value: String
@@ -9,9 +9,5 @@ trait ValueType {
 trait StringValueTypeJsonCodec[A <: ValueType] {
   def apply(string: String): A
 
-  lazy implicit val codec: Codec[A] =
-    Codec.from(
-      Decoder.decodeString.map(apply),
-      Encoder.encodeString.contramap(_.value)
-    )
+  lazy implicit val codec: JsonCodec[A] = JsonCodec.string.transform(apply, _.value)
 }
