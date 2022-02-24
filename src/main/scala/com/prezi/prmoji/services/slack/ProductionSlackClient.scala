@@ -6,17 +6,22 @@ import zhttp.http._
 import zhttp.service.Client
 import zhttp.service.Client.ClientParams
 import zio.IO
-import zio.json.{DecoderOps, DeriveJsonCodec, EncoderOps, JsonCodec}
+import zio.json.{DecoderOps, EncoderOps}
 
 final case class ProductionSlackClient(httpClient: Client, slackToken: SlackToken) extends Slack {
 
-  override def addEmoji(emoji: Emoji, channel: SlackChannel, timestamp: SlackTimestamp): IO[SlackError, Unit] =
+  private def makeHeaders() =
+    Headers.authorization(slackToken.token) ++
+      Headers.host("slack.com") ++
+      Headers.contentType(HeaderValues.applicationJson)
+
+  private def post(url: URL, data: String) =
     httpClient.request(
       ClientParams(
         method = Method.POST,
-        url = URL.fromString("https://slack.com/api/reactions.add").toOption.get,
-        getHeaders = Headers.host("slack.com") ++ Headers.contentType(HeaderValues.applicationJson),
-        data = HttpData.fromString(AddEmojiPayload(emoji, channel, timestamp).toJson),
+        url = url,
+        getHeaders = makeHeaders(),
+        data = HttpData.fromString(data),
       )
     )
       .flatMap(_.getBodyAsString)
@@ -28,8 +33,19 @@ final case class ProductionSlackClient(httpClient: Client, slackToken: SlackToke
       )
       .flatMap {
         case SlackResponse.OK =>
-          IO.unit
+          IO.succeed(SlackResponse.OK)
         case SlackResponse.Error(error) =>
           IO.fail(SlackError.FailedResponse(error))
       }
+
+  override def addEmoji(name: Emoji, channel: SlackChannel, timestamp: SlackTimestamp): IO[SlackError, SlackResponse.OK.type] =
+    post(ProductionSlackClient.reactions, AddEmojiPayload(name, channel, timestamp).toJson)
+
+  override def postMessage(channel: SlackChannel, text: String): IO[SlackError, SlackResponse.OK.type] =
+    post(ProductionSlackClient.postMessage, PostMessagePayload(channel, text).toJson)
+}
+
+object ProductionSlackClient {
+  private val reactions: URL = URL.fromString("https://slack.com/api/reactions.add").toOption.get
+  private val postMessage: URL = URL.fromString("https://slack.com/api/chat.postMessage").toOption.get
 }

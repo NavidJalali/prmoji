@@ -3,8 +3,12 @@ package com.prezi.prmoji.services.slack.models
 import zio.json.ast.{Json, JsonCursor}
 import zio.json.JsonCodec
 
-sealed trait SlackResponse extends Product with Serializable {
+sealed trait SlackResponse extends Product with Serializable { self =>
   val ok: Boolean
+  def fold[A, B](ifOK: => A)(ifError: String => A): A = self match {
+    case SlackResponse.OK => ifOK
+    case SlackResponse.Error(error) => ifError(error)
+  }
 }
 
 object SlackResponse {
