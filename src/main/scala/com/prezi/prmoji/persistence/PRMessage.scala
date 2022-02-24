@@ -2,7 +2,7 @@ package com.prezi.prmoji.persistence
 
 import com.prezi.prmoji.services.slack.models.{SlackChannel, SlackTimestamp}
 import slick.lifted.{Index, ProvenShape, Tag}
-import zio.IO
+import zio.{Function0ToLayerOps, Function2ToLayerOps, IO}
 import slick.jdbc.H2Profile.api._
 
 import java.sql.Timestamp
@@ -36,6 +36,10 @@ trait PRMessageRepository {
   def deleteAll(): IO[Throwable, Int]
 }
 
+object PRMessageRepository {
+  val live = (SlickPRMessageRepository.apply _).toLayer
+  val test = (MockPRMessageRepository.apply _ ).toLayer
+}
 
 object PRMessageTable {
   final class PRMessages(tag: Tag) extends Table[PRMessage](_tableTag = tag, _tableName = "pr_messages") {

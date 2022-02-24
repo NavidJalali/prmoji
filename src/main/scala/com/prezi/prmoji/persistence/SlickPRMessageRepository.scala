@@ -4,11 +4,10 @@ import com.prezi.prmoji.services.slack.models.{SlackChannel, SlackTimestamp}
 import slick.interop.zio.DatabaseProvider
 import slick.interop.zio.syntax._
 import slick.jdbc.{JdbcBackend, JdbcProfile}
-import zio.{IO, ZIO, ZLayer}
+import zio.{Function2ToLayerOps, IO, ZIO, ZLayer}
 
 import java.sql.Timestamp
 import java.time.Instant
-import scala.util.chaining.scalaUtilChainingOps
 
 case class SlickPRMessageRepository(databaseProvider: DatabaseProvider, jdbcProfile: JdbcProfile) extends PRMessageRepository {
 
@@ -18,26 +17,22 @@ case class SlickPRMessageRepository(databaseProvider: DatabaseProvider, jdbcProf
 
   val dbLayer: ZLayer[Any, Nothing, JdbcBackend#DatabaseDef] = databaseProvider.db.toLayer
 
+  def toIO[A](dbio: DBIO[A]): ZIO[Any, Throwable, A] = ZIO.fromDBIO(dbio).provide(dbLayer)
+
   override def getByUrl(prUrl: String): IO[Throwable, Seq[PRMessage]] =
-    prMessages
-        .filter(_.prUrl === prUrl)
-        .result.pipe(ZIO.fromDBIO)
-        .provide(dbLayer)
+    toIO(prMessages.filter(_.prUrl === prUrl).result)
 
   override def create(prUrl: String, messageChannel: SlackChannel, messageTimestamp: SlackTimestamp): IO[Throwable, PRMessage] = {
-    val prMessageRow = PRMessage(0, Timestamp.from(Instant.now()), prUrl, messageChannel, messageTimestamp);
-
-    ZIO.fromDBIO(prMessages.returning(prMessages.map(_.id)) += prMessageRow)
-        .provide(dbLayer)
-        .map(id => prMessageRow.copy(id = id))
+    val prMessageRow = PRMessage(0, Timestamp.from(Instant.now()), prUrl, messageChannel, messageTimestamp)
+    toIO(prMessages.returning(prMessages.map(_.id)) += prMessageRow).map(id => prMessageRow.copy(id = id))
   }
 
   override def delete(prUrl: String): IO[Throwable, Int] =
-    ZIO.fromDBIO(prMessages.filter(_.prUrl === prUrl).delete)
-        .provide(dbLayer)
+    toIO(prMessages.filter(_.prUrl === prUrl).delete)
 
-  override def deleteBeforeDate(date: Timestamp): IO[Throwable, Int] = ???
+  override def deleteBeforeDate(date: Timestamp): IO[Throwable, Int] =
+    toIO(prMessages.filter(_.insertedAt < date).delete)
 
-  override def deleteAll(): IO[Throwable, Int] = ZIO.fromDBIO(prMessages.delete)
-      .provide(dbLayer)
+  override def deleteAll(): IO[Throwable, Int] =
+    toIO(prMessages.delete)
 }
