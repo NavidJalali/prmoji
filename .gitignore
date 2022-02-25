@@ -3,5 +3,6 @@
 .vscode/
 .bloop/
 .metals/
-
 target/
+metals.sbt
+.DS_Store
