@@ -1,9 +1,9 @@
 package com.prezi.prmoji.persistence
 
 import com.prezi.prmoji.services.slack.models.{SlackChannel, SlackTimestamp}
-import slick.lifted.{Index, ProvenShape, Tag}
-import zio.{Function0ToLayerOps, Function2ToLayerOps, IO}
 import slick.jdbc.H2Profile.api._
+import slick.lifted.{Index, ProvenShape, Tag}
+import zio.{Function0ToLayerOps, Function1ToLayerOps, IO}
 
 import java.sql.Timestamp
 
@@ -17,9 +17,17 @@ case class PRMessage(id: Long,
 object PRMessage {
   type PRMessageTuple = (Long, Timestamp, String, String, String)
 
-  def fromTuple(tuple: PRMessageTuple): PRMessage = ???
+  def fromTuple(tuple: PRMessageTuple): PRMessage =
+    tuple match {
+      case (id, insertedAt, prUrl, channel, ts) =>
+        PRMessage(id, insertedAt, prUrl, SlackChannel(channel), SlackTimestamp(ts))
+    }
 
-  def toTuple(prMessage: PRMessageTuple): Option[PRMessageTuple] = ???
+  def toTuple(prMessage: PRMessage): Option[PRMessageTuple] =
+    prMessage match {
+      case PRMessage(id, insertedAt, prUrl, messageChannel, messageTimestamp) =>
+        Some(id, insertedAt, prUrl, messageChannel.value, messageTimestamp.value)
+    }
 }
 
 trait PRMessageRepository {
@@ -38,7 +46,7 @@ trait PRMessageRepository {
 
 object PRMessageRepository {
   val live = (SlickPRMessageRepository.apply _).toLayer
-  val test = (MockPRMessageRepository.apply _ ).toLayer
+  val test = (MockPRMessageRepository.apply _).toLayer
 }
 
 object PRMessageTable {

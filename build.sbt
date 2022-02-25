@@ -4,23 +4,25 @@ version := "0.1"
 
 scalaVersion := "2.13.7"
 
-val zioVersion = "2.0.0-RC1"
-
-val zioJsonVersion = "0.3.0-RC2"
-
-val zioHttpVersion = "2.0.0-RC2"
+val versions = new {
+  val zioVersion = "2.0.0-RC2"
+  val zioJsonVersion = "0.3.0-RC3"
+  val zioHttpVersion = "2.0.0-RC4"
+  val slickVersion = "3.3.3"
+  val mySQLConnectorVersion = "8.0.25"
+  val h2Version = "2.1.210"
+}
 
 libraryDependencies ++= Seq(
-  "dev.zio"                     %% "zio"                          % zioVersion,
-  "dev.zio"                     %% "zio-test"                     % zioVersion % Test,
-  "dev.zio"                     %% "zio-json"                     % zioJsonVersion,
-  "io.d11"                      %% "zhttp"                        % zioHttpVersion,
-  "com.typesafe.slick"          %% "slick"                        % "3.3.3",
-  "com.typesafe.slick"          %% "slick-hikaricp"               % "3.3.3",
-  "io.scalac"                   %% "zio-slick-interop"            % "0.3.0"
+  "dev.zio"                     %% "zio"                          % versions.zioVersion,
+  "dev.zio"                     %% "zio-test"                     % versions.zioVersion % Test,
+  "dev.zio"                     %% "zio-json"                     % versions.zioJsonVersion,
+  "io.d11"                      %% "zhttp"                        % versions.zioHttpVersion,
+  "com.typesafe.slick"          %% "slick"                        % versions.slickVersion,
+  "com.typesafe.slick"          %% "slick-hikaricp"               % versions.slickVersion,
+  "mysql"                       %  "mysql-connector-java"         % versions.mySQLConnectorVersion,
+  "com.h2database"              %  "h2"                            % versions.h2Version
 )
 
-libraryDependencies += "mysql" % "mysql-connector-java" % "8.0.23"
-libraryDependencies += "com.h2database" % "h2" % "1.4.200"
 
 testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")

@@ -3,12 +3,12 @@ package com.prezi.prmoji.services.slack
 import com.prezi.prmoji.models.Emoji
 import com.prezi.prmoji.services.slack.models._
 import zhttp.http._
-import zhttp.service.Client
-import zhttp.service.Client.ClientParams
+import zhttp.service.Client.ClientRequest
+import zhttp.service.{ChannelFactory, Client, EventLoopGroup}
 import zio.IO
 import zio.json.{DecoderOps, EncoderOps}
 
-final case class ProductionSlackClient(httpClient: Client, slackToken: SlackToken) extends Slack {
+final case class ProductionSlackClient(slackToken: SlackToken) extends Slack {
 
   private def makeHeaders() =
     Headers.authorization(slackToken.token) ++
@@ -16,15 +16,15 @@ final case class ProductionSlackClient(httpClient: Client, slackToken: SlackToke
       Headers.contentType(HeaderValues.applicationJson)
 
   private def post(url: URL, data: String) =
-    httpClient.request(
-      ClientParams(
-        method = Method.POST,
+    Client.request(
+      ClientRequest(
         url = url,
-        getHeaders = makeHeaders(),
+        method = Method.POST,
+        headers = makeHeaders(),
         data = HttpData.fromString(data),
       )
     )
-      .flatMap(_.getBodyAsString)
+      .flatMap(_.bodyAsString)
       .mapError(SlackError.ClientError)
       .flatMap(
         response =>
@@ -37,6 +37,7 @@ final case class ProductionSlackClient(httpClient: Client, slackToken: SlackToke
         case SlackResponse.Error(error) =>
           IO.fail(SlackError.FailedResponse(error))
       }
+      .provide(ChannelFactory.auto ++ EventLoopGroup.auto())
 
   override def addEmoji(name: Emoji, channel: SlackChannel, timestamp: SlackTimestamp): IO[SlackError, SlackResponse.OK.type] =
     post(ProductionSlackClient.reactions, AddEmojiPayload(name, channel, timestamp).toJson)
