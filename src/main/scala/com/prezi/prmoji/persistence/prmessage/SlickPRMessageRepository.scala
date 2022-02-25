@@ -1,4 +1,4 @@
-package com.prezi.prmoji.persistence
+package com.prezi.prmoji.persistence.prmessage
 
 import com.prezi.prmoji.persistence.interop.DatabaseProvider
 import com.prezi.prmoji.persistence.interop.ZIOCompanionSyntax._

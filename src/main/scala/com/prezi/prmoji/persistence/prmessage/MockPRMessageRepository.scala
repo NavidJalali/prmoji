@@ -1,4 +1,4 @@
-package com.prezi.prmoji.persistence
+package com.prezi.prmoji.persistence.prmessage
 
 import com.prezi.prmoji.services.slack.models.{SlackChannel, SlackTimestamp}
 import zio.IO
