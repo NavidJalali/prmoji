@@ -2,6 +2,7 @@ package com.prezi.prmoji.persistence.prmessage
 
 import com.prezi.prmoji.persistence.interop.DatabaseProvider
 import com.prezi.prmoji.persistence.interop.ZIOCompanionSyntax._
+import com.prezi.prmoji.persistence.prmessage.PRMessageRepository.Error._
 import com.prezi.prmoji.services.slack.models.{SlackChannel, SlackTimestamp}
 import zio.{IO, ZIO, ZLayer}
 
@@ -14,24 +15,33 @@ case class SlickPRMessageRepository(db: DatabaseProvider) extends PRMessageRepos
 
   val prMessages = PRMessageTable.table
 
+  val env = ZLayer.succeed(db)
+
   def toIO[A](dbio: DBIO[A]): ZIO[Any, Throwable, A] =
-    ZIO.fromDBIO(dbio)
-      .provide(ZLayer.succeed(db))
+    ZIO.fromDBIO(dbio).provide(env)
 
-  override def getByUrl(prUrl: String): IO[Throwable, Seq[PRMessage]] =
+  override def getByUrl(prUrl: String): IO[ReadError, Seq[PRMessage]] =
     toIO(prMessages.filter(_.prUrl === prUrl).result)
+      .mapError(ReadError)
 
-  override def create(prUrl: String, messageChannel: SlackChannel, messageTimestamp: SlackTimestamp): IO[Throwable, PRMessage] = {
+  override def create(prUrl: String,
+                      messageChannel: SlackChannel,
+                      messageTimestamp: SlackTimestamp): IO[WriteError, PRMessage] = {
     val prMessageRow = PRMessage(0, Timestamp.from(Instant.now), prUrl, messageChannel, messageTimestamp)
-    toIO(prMessages.returning(prMessages.map(_.id)) += prMessageRow).map(id => prMessageRow.copy(id = id))
+    toIO(prMessages.returning(prMessages.map(_.id)) += prMessageRow)
+      .mapBoth(WriteError, id => prMessageRow.copy(id = id))
   }
 
-  override def delete(prUrl: String): IO[Throwable, Int] =
+  override def delete(prUrl: String): IO[DeleteError, Int] =
     toIO(prMessages.filter(_.prUrl === prUrl).delete)
+      .mapError(DeleteError)
 
-  override def deleteBeforeDate(date: Timestamp): IO[Throwable, Int] =
+
+  override def deleteBeforeDate(date: Timestamp): IO[DeleteError, Int] =
     toIO(prMessages.filter(_.insertedAt < date).delete)
+      .mapError(DeleteError)
 
-  override def deleteAll(): IO[Throwable, Int] =
+  override def deleteAll(): IO[DeleteError, Int] =
     toIO(prMessages.delete)
+      .mapError(DeleteError)
 }

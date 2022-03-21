@@ -10,15 +10,20 @@ trait DatabaseProvider {
 }
 
 object DatabaseProvider {
-  val live: ZManaged[Config & JdbcProfile, Throwable, DatabaseProvider] =
-    for {
-      jdbcProfile <- ZManaged.service[JdbcProfile]
-      config <- ZManaged.service[Config]
-      dbDef <- ZManaged.acquireReleaseWith(
-        ZIO.attempt(jdbcProfile.backend.Database.forConfig("", config))
-      )(db => ZIO.attempt(db.close()).orDie)
-    } yield new DatabaseProvider {
-      override val db: JdbcBackend#DatabaseDef = dbDef
-      override val profile = jdbcProfile
+  val live: ZLayer[Config & JdbcProfile, Throwable, DatabaseProvider] = {
+    ZLayer.fromZIO {
+      ZIO.scoped {
+        for {
+          jdbcProfile <- ZIO.service[JdbcProfile]
+          config <- ZIO.service[Config]
+          dbDef <- ZIO.acquireRelease(
+            ZIO.attempt(jdbcProfile.backend.Database.forConfig("database", config))
+          )(db => ZIO.attempt(db.close()).orDie)
+        } yield new DatabaseProvider {
+          override val db: JdbcBackend#DatabaseDef = dbDef
+          override val profile = jdbcProfile
+        }
+      }
     }
+  }
 }
