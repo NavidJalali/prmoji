@@ -5,7 +5,7 @@ version := "0.1"
 scalaVersion := "2.13.7"
 
 val versions = new {
-  val zioVersion = "2.0.0-RC3"
+  val zioVersion = "2.0.0-RC2"
   val zioJsonVersion = "0.3.0-RC3"
   val zioHttpVersion = "2.0.0-RC4"
   val slickVersion = "3.3.3"
