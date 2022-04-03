@@ -34,6 +34,11 @@ final case class MockPRMessageRepository() extends PRMessageRepository {
   }
     .mapError(WriteError)
 
+  override def createAll(prs: List[(String, SlackChannel, SlackTimestamp)]): IO[WriteError, Unit] =
+    IO.foreach(prs) {
+      (create _).tupled(_)
+    }.unit
+
   private def deleteIf(predicate: PRMessage => Boolean): IO[DeleteError, Int] =
     IO.attempt {
       val keys = data.asScala.collect { case (key, value) if predicate(value) => key }.toList

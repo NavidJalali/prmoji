@@ -24,6 +24,16 @@ case class SlickPRMessageRepository(db: DatabaseProvider) extends PRMessageRepos
     toIO(prMessages.filter(_.prUrl === prUrl).result)
       .mapError(ReadError)
 
+  override def createAll(prs: List[(String, SlackChannel, SlackTimestamp)]): IO[WriteError, Unit] = {
+    val now = Timestamp.from(Instant.now)
+    val rows = prs.map {
+      case (url, channel, timestamp) => PRMessage(0, now, url, channel, timestamp)
+    }
+    toIO(prMessages ++= rows)
+      .unit
+      .mapError(WriteError)
+  }
+
   override def create(prUrl: String,
                       messageChannel: SlackChannel,
                       messageTimestamp: SlackTimestamp): IO[WriteError, PRMessage] = {

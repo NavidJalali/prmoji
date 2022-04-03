@@ -8,7 +8,7 @@ import zhttp.service.{ChannelFactory, Client, EventLoopGroup}
 import zio.IO
 import zio.json.{DecoderOps, EncoderOps}
 
-final case class ProductionSlackClient(slackToken: SlackToken) extends Slack {
+final case class ZHttpSlackClient(slackToken: SlackToken) extends Slack {
 
   private def makeHeaders() =
     Headers.authorization(slackToken.token) ++
@@ -40,13 +40,13 @@ final case class ProductionSlackClient(slackToken: SlackToken) extends Slack {
       .provide(ChannelFactory.auto ++ EventLoopGroup.auto())
 
   override def addEmoji(name: Emoji, channel: SlackChannel, timestamp: SlackTimestamp): IO[SlackError, SlackResponse.OK.type] =
-    post(ProductionSlackClient.reactions, AddEmojiPayload(name, channel, timestamp).toJson)
+    post(ZHttpSlackClient.reactions, AddEmojiPayload(name, channel, timestamp).toJson)
 
   override def postMessage(channel: SlackChannel, text: String): IO[SlackError, SlackResponse.OK.type] =
-    post(ProductionSlackClient.postMessage, PostMessagePayload(channel, text).toJson)
+    post(ZHttpSlackClient.postMessage, PostMessagePayload(channel, text).toJson)
 }
 
-object ProductionSlackClient {
+object ZHttpSlackClient {
   private val reactions: URL = URL.fromString("https://slack.com/api/reactions.add").toOption.get
   private val postMessage: URL = URL.fromString("https://slack.com/api/chat.postMessage").toOption.get
 }

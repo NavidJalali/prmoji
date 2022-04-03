@@ -1,3 +1,4 @@
+import com.prezi.prmoji.services.slack.models.{SlackChannel, SlackTimestamp, SlackWebhookMessage}
 import zio.Console.printLine
 import zio.ZIOAppDefault
 
@@ -14,6 +15,13 @@ object Main extends ZIOAppDefault {
         .as(Response.text("OK"))
   }
 
+  val server = Server.start(8080, app)
+
   override def run: URIO[zio.ZEnv, ExitCode] =
-    Server.start(8080, app).exitCode
+    ZIO.attempt {
+      SlackWebhookMessage("", text, SlackChannel(""), SlackTimestamp("")).getPrUrls
+    }
+      .tap(Console.printLine(_))
+      .catchAllCause(Console.printLine(_))
+      .exitCode
 }
