@@ -11,7 +11,7 @@ trait Slack {
 }
 
 object Slack extends Accessible[Slack] {
-  val live = (ProductionSlackClient.apply _).toLayer
+  val live = (ZHttpSlackClient.apply _).toLayer
 
   //  val test = (TestSlackClient.apply _ ).toLayer
 }

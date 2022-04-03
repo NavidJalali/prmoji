@@ -13,6 +13,8 @@ trait PRMessageRepository {
              messageChannel: SlackChannel,
              messageTimestamp: SlackTimestamp): IO[WriteError, PRMessage]
 
+  def createAll(prs: List[(String, SlackChannel, SlackTimestamp)]): IO[WriteError, Unit]
+
   def delete(prUrl: String): IO[DeleteError, Int]
 
   def deleteBeforeDate(date: Timestamp): IO[DeleteError, Int]
