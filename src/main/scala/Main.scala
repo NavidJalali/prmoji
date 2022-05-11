@@ -8,12 +8,12 @@ object Main extends ZIOAppDefault {
   import zio._
 
   val app = Http.collectZIO[Request] {
-    case request@method -> !! / "testing" =>
+    case request @ method -> !! / "testing" =>
       request.bodyAsString
         .tap(resp => printLine((method, resp)))
         .as(Response.text("OK"))
   }
 
-  override def run: URIO[zio.ZEnv, ExitCode] =
-    Server.start(8080, app).exitCode
+  override def run =
+    Server.start(8080, app)
 }

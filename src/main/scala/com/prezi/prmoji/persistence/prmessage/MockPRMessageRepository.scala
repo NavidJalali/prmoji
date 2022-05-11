@@ -2,48 +2,83 @@ package com.prezi.prmoji.persistence.prmessage
 
 import com.prezi.prmoji.persistence.prmessage.PRMessageRepository.Error._
 import com.prezi.prmoji.services.slack.models.{SlackChannel, SlackTimestamp}
-import zio.IO
+import zio.{Chunk, IO}
+import zio.stm.{TMap, ZSTM}
 
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.concurrent.ConcurrentHashMap
-import scala.jdk.CollectionConverters._
-import scala.math.Ordered.orderingToOrdered
+import scala.util.Random
 
-final case class MockPRMessageRepository() extends PRMessageRepository {
-
-  val data = new ConcurrentHashMap[Long, PRMessage]()
+final case class MockPRMessageRepository(
+    underlying: TMap[String, Seq[PRMessage]]
+) extends PRMessageRepository {
 
   override def getByUrl(prUrl: String): IO[ReadError, Seq[PRMessage]] =
-    IO.attempt {
-      data
-        .asScala
-        .collect { case (_, value) if value.prUrl == prUrl => value }
-        .toList
-    }
-      .mapError(ReadError)
+    underlying.get(prUrl).map(_.getOrElse(Seq.empty)).commit
 
-  override def create(prUrl: String, messageChannel: SlackChannel, messageTimestamp: SlackTimestamp): IO[WriteError, PRMessage] = {
-    IO.attempt {
-      val id = scala.util.Random.nextLong()
-      val now = Timestamp.from(Instant.now())
-      data.put(id, PRMessage(
-        id = id, insertedAt = now, prUrl = prUrl, messageChannel = messageChannel, messageTimestamp = messageTimestamp
-      ))
-    }
-  }
-    .mapError(WriteError)
+  override def create(
+      prUrl: String,
+      messageChannel: SlackChannel,
+      messageTimestamp: SlackTimestamp
+  ): IO[WriteError, PRMessage] =
+    (for {
+      id <- ZSTM.succeed(Random.nextLong)
+      insertedAt <- ZSTM.succeed(Timestamp.from(Instant.now()))
+      inserted = PRMessage(
+        id,
+        insertedAt,
+        prUrl,
+        messageChannel,
+        messageTimestamp
+      )
+      _ <- underlying.updateWith(prUrl) { maybeCurrent =>
+        Some(
+          maybeCurrent.getOrElse(Seq.empty) :+ inserted
+        )
+      }
+    } yield inserted).commit
 
-  private def deleteIf(predicate: PRMessage => Boolean): IO[DeleteError, Int] =
-    IO.attempt {
-      val keys = data.asScala.collect { case (key, value) if predicate(value) => key }.toList
-      keys.foreach(data.remove)
-      keys.length
-    }.mapError(DeleteError)
+  override def delete(prUrl: String): IO[DeleteError, Int] =
+    (for {
+      count <- underlying.get(prUrl).map(_.fold(0)(_.length))
+      _ <- underlying.delete(prUrl)
+    } yield count).commit
 
-  override def delete(prUrl: String): IO[DeleteError, Int] = deleteIf(_.prUrl == prUrl)
+  override def deleteBeforeDate(date: Timestamp): IO[DeleteError, Int] =
+    (for {
+      toDelete <- underlying
+        .findAll { case id -> messages =>
+          Chunk.fromIterable(messages.zipWithIndex.collect {
+            case pr -> index if pr.insertedAt.before(date) =>
+              id -> index
+          })
+        }
+        .map {
+          _.flatten.groupBy(_._1).map { case url -> chunk =>
+            url -> chunk.map(_._2).toSet
+          }
+        }
+        .map(Chunk.fromIterable)
 
-  override def deleteBeforeDate(date: Timestamp): IO[DeleteError, Int] = deleteIf(_.insertedAt < date)
+      _ <- ZSTM.foreach(toDelete) { case id -> indexes =>
+        underlying.updateWith(id) {
+          _.map {
+            _.zipWithIndex
+              .filterNot { case _ -> index =>
+                indexes.contains(index)
+              }
+              .map(_._1)
+          }.flatMap(prs => Option.when(prs.nonEmpty)(prs))
+        }
+      }
+    } yield toDelete.foldLeft(0) { case (acc, _ -> chunk) =>
+      acc + chunk.size
+    }).commit
 
-  override def deleteAll(): IO[DeleteError, Int] = deleteIf(_ => true)
+  override def deleteAll(): IO[DeleteError, Int] =
+    (for {
+      keys <- underlying.keys
+      count = keys.length
+      _ <- underlying.deleteAll(keys)
+    } yield count).commit
 }

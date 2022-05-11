@@ -6,9 +6,16 @@ import slick.lifted.{Index, ProvenShape, Tag}
 import java.sql.Timestamp
 
 object PRMessageTable {
-  final class PRMessages(tag: Tag) extends Table[PRMessage](_tableTag = tag, _tableName = "pr_messages") {
+  final class PRMessages(tag: Tag)
+      extends Table[PRMessage](_tableTag = tag, _tableName = "pr_messages") {
     override def * : ProvenShape[PRMessage] =
-      (id, insertedAt, prUrl, messageChannel, messageTimestamp) <> (PRMessage.fromTuple, PRMessage.toTuple)
+      (
+        id,
+        insertedAt,
+        prUrl,
+        messageChannel,
+        messageTimestamp
+      ) <> (PRMessage.fromTuple, PRMessage.toTuple)
 
     def idxPrUrl: Index = index("index_pr_url", prUrl)
 

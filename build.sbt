@@ -5,12 +5,12 @@ version := "0.1"
 scalaVersion := "2.13.7"
 
 val versions = new {
-  val zioVersion = "2.0.0-RC2"
-  val zioJsonVersion = "0.3.0-RC3"
-  val zioHttpVersion = "2.0.0-RC4"
+  val zioVersion = "2.0.0-RC5"
+  val zioJsonVersion = "0.3.0-RC8"
+  val zioHttpVersion = "2.0.0-RC7"
   val slickVersion = "3.3.3"
-  val mySQLConnectorVersion = "8.0.25"
-  val h2Version = "2.1.210"
+  val mySQLConnectorVersion = "8.0.29"
+  val h2Version = "2.1.212"
 }
 
 libraryDependencies ++= Seq(

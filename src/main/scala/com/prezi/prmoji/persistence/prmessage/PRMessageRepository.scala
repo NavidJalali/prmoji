@@ -21,8 +21,8 @@ trait PRMessageRepository {
 }
 
 object PRMessageRepository {
-  val live = (SlickPRMessageRepository.apply _).toLayer
-  val test = (MockPRMessageRepository.apply _).toLayer
+  val live = ZLayer.fromFunction(SlickPRMessageRepository.apply _)
+  val test = ZLayer.fromFunction(MockPRMessageRepository.apply _)
 
   sealed trait Error {
     val cause: Throwable

@@ -4,7 +4,7 @@ import com.prezi.prmoji.persistence.interop.DatabaseProvider
 import com.prezi.prmoji.persistence.interop.ZIOCompanionSyntax._
 import com.prezi.prmoji.persistence.prmessage.PRMessageRepository.Error._
 import com.prezi.prmoji.services.slack.models.{SlackChannel, SlackTimestamp}
-import zio.{IO, ZIO, ZLayer}
+import zio.{IO, ULayer, ZIO, ZLayer}
 
 import java.sql.Timestamp
 import java.time.Instant
@@ -15,7 +15,7 @@ case class SlickPRMessageRepository(db: DatabaseProvider) extends PRMessageRepos
 
   val prMessages = PRMessageTable.table
 
-  val env = ZLayer.succeed(db)
+  val env: ULayer[DatabaseProvider] = ZLayer.succeed(db)
 
   def toIO[A](dbio: DBIO[A]): ZIO[Any, Throwable, A] =
     ZIO.fromDBIO(dbio).provide(env)
