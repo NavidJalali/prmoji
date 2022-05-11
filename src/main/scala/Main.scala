@@ -5,7 +5,6 @@ object Main extends ZIOAppDefault {
 
   import zhttp.http._
   import zhttp.service.Server
-  import zio._
 
   val app = Http.collectZIO[Request] {
     case request @ method -> !! / "testing" =>

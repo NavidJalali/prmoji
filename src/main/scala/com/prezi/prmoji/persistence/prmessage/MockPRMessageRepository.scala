@@ -81,4 +81,29 @@ final case class MockPRMessageRepository(
       count = keys.length
       _ <- underlying.deleteAll(keys)
     } yield count).commit
+
+  override def createAll(
+      prs: List[(String, SlackChannel, SlackTimestamp)]
+  ): IO[WriteError, Unit] = {
+    val now = Timestamp.from(Instant.now)
+    val toInsert = prs.groupBy(_._1).toList.map { case (url, prs) =>
+      url -> prs.map { case (_, channel, timestamp) =>
+        PRMessage(
+          Random.nextLong,
+          now,
+          url,
+          channel,
+          timestamp
+        )
+      }
+    }
+    ZSTM
+      .foreach(toInsert) { case (url, prs) =>
+        underlying.updateWith(url) {
+          _.map(prs ++ _).map(_.distinct)
+        }
+      }
+      .unit
+      .commit
+  }
 }
