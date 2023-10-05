@@ -1,0 +1,50 @@
+{
+    "api_app_id": "A05UGLKD284",
+    "authorizations": [
+      {
+        "enterprise_id": null,
+        "is_bot": true,
+        "is_enterprise_install": false,
+        "team_id": "T05UD3H9GF4",
+        "user_id": "U05USV29F1P"
+      }
+    ],
+    "context_enterprise_id": null,
+    "context_team_id": "T05UD3H9GF4",
+    "event": {
+      "blocks": [
+        {
+          "block_id": "trQ4",
+          "elements": [
+            {
+              "elements": [
+                {
+                  "text": "Hello World!",
+                  "type": "text"
+                }
+              ],
+              "type": "rich_text_section"
+            }
+          ],
+          "type": "rich_text"
+        }
+      ],
+      "channel": "C05UBF6AJH3",
+      "channel_type": "group",
+      "client_msg_id": "ab804557-268d-4348-b1e2-2925e72bca8e",
+      "event_ts": "1696367451.886309",
+      "team": "T05UD3H9GF4",
+      "text": "Hello World!",
+      "ts": "1696367451.886309",
+      "type": "message",
+      "user": "U05TYH6U1K9"
+    },
+    "event_context": "4-eyJldCI6Im1lc3NhZ2UiLCJ0aWQiOiJUMDVVRDNIOUdGNCIsImFpZCI6IkEwNVVHTEtEMjg0IiwiY2lkIjoiQzA1VUJGNkFKSDMifQ",
+    "event_id": "Ev0609FATYG0",
+    "event_time": 1696367451,
+    "is_ext_shared_channel": false,
+    "team_id": "T05UD3H9GF4",
+    "token": "5dZGffp9ytNTRFiuA6wyjKXZ",
+    "type": "event_callback"
+  }
+  
