@@ -9,7 +9,7 @@ pub fn extract_pr_urls(message: &String) -> Vec<PrUrl> {
     .collect()
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize)]
 pub struct PrUrl(String);
 
 #[cfg(test)]
