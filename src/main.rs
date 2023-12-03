@@ -3,7 +3,7 @@ use axum::{
   routing::{get, post},
   Router,
 };
-use std::net::SocketAddr;
+use tokio::net::TcpListener;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
@@ -44,12 +44,11 @@ async fn main() {
 
   let app = make_router(state);
 
-  let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+  let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
 
-  info!("Listening on {}", addr);
+  info!("Listening on {:?}", listener.local_addr().unwrap());
 
-  axum::Server::bind(&addr)
-    .serve(app.into_make_service())
+  axum::serve(listener, app.into_make_service())
     .await
     .unwrap();
 }
