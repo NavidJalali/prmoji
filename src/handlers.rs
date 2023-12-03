@@ -3,6 +3,7 @@ use crate::models::*;
 use crate::slack;
 use crate::AppState;
 use axum::extract::State;
+use axum::http::HeaderMap;
 use axum::Json;
 use tracing::info;
 
@@ -14,7 +15,12 @@ pub async fn list<S: AppState>(state: State<S>) -> Json<Vec<PR>> {
   Json(prs)
 }
 
-pub async fn debug<S: AppState>(Json(payload): Json<serde_json::Value>) {
+pub async fn debug<S: AppState>(headers: HeaderMap, Json(payload): Json<serde_json::Value>) {
+  let headers = headers
+    .iter()
+    .map(|(key, value)| (key.to_string(), value.to_str().unwrap().to_string()))
+    .collect::<Vec<(String, String)>>();
+  info!("Received headers: {:?}", headers);
   info!("Received payload: {}", payload.to_string());
 }
 

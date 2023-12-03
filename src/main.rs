@@ -12,6 +12,7 @@ use crate::app_state::TestState;
 mod app_state;
 mod clock;
 mod database;
+mod github;
 mod handlers;
 mod models;
 mod slack;
@@ -29,6 +30,7 @@ pub fn make_router<S: AppState>(state: S) -> Router {
   Router::new()
     .route("/", post(handlers::event::<S>))
     .route("/", get(handlers::list::<S>))
+    .route("/github", post(handlers::debug::<S>))
     .with_state(state)
 }
 
