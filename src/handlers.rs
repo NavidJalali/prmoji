@@ -35,10 +35,10 @@ pub async fn event<S: AppState>(
 
           if !prs.is_empty() {
             info!("Extracted prs: {:?}", prs);
-            db.transactionally(|mut connection| async move {
-              db.insert_all(prs, &mut connection).await
-            })
-            .await;
+            db.transactionally(
+              |mut connection| async move { db.insert_all(prs, &mut connection).await },
+            )
+            .await
           }
         }
         slack::Event::Update(update) => match update {
@@ -63,10 +63,15 @@ pub async fn event<S: AppState>(
               state
                 .db()
                 .transactionally(|mut connection| async move {
-                  db.delete_all(to_delete, &mut connection).await;
-                  db.insert_all(prs, &mut connection).await;
+                  if !to_delete.is_empty() {
+                    db.delete_all(to_delete, &mut connection).await
+                  }
+
+                  if !prs.is_empty() {
+                    db.insert_all(prs, &mut connection).await
+                  }
                 })
-                .await;
+                .await
             }
           }
           slack::MessageUpdate::MessageDeleted {
