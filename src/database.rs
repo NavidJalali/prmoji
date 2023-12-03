@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use futures::Future;
 use tokio::sync::RwLock;
 
 use crate::{
@@ -8,10 +9,14 @@ use crate::{
 };
 
 #[async_trait::async_trait]
-pub trait Database {
-  async fn list(&self) -> Vec<PR>;
-  async fn upsert_all(&self, prs: Vec<PR>) -> ();
-  async fn delete_all(&self, ids: Vec<ToDelete>) -> ();
+pub trait Database<Connection> {
+  async fn transactionally<T, F, Fut>(&self, f: F) -> T
+  where
+    F: FnOnce(Connection) -> Fut + Send + Sync,
+    Fut: Future<Output = T> + Send;
+  async fn list(&self, connection: &mut Connection) -> Vec<PR>;
+  async fn insert_all(&self, prs: Vec<PR>, connection: &mut Connection) -> ();
+  async fn delete_all(&self, ids: Vec<ToDelete>, connection: &mut Connection) -> ();
 }
 
 #[derive(Clone)]
@@ -28,13 +33,21 @@ impl InMemoryDB {
 }
 
 #[async_trait::async_trait]
-impl Database for InMemoryDB {
-  async fn list(&self) -> Vec<PR> {
+impl Database<()> for InMemoryDB {
+  async fn transactionally<T, F, Fut>(&self, f: F) -> T
+  where
+    F: FnOnce(()) -> Fut + Send + Sync,
+    Fut: Future<Output = T> + Send,
+  {
+    f(()).await
+  }
+
+  async fn list(&self, connection: &mut ()) -> Vec<PR> {
     let items = self.items.read().await;
     items.values().cloned().collect()
   }
 
-  async fn upsert_all(&self, prs: Vec<PR>) {
+  async fn insert_all(&self, prs: Vec<PR>, connection: &mut ()) {
     let mut items = self.items.write().await;
     for pr in prs {
       let key = (pr.url.clone(), pr.channel.clone());
@@ -42,7 +55,7 @@ impl Database for InMemoryDB {
     }
   }
 
-  async fn delete_all(&self, to_deletes: Vec<ToDelete>) {
+  async fn delete_all(&self, to_deletes: Vec<ToDelete>, connection: &mut ()) {
     let mut items = self.items.write().await;
     for to_delete in to_deletes {
       let key = (to_delete.url.clone(), to_delete.channel.clone());

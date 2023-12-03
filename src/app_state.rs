@@ -2,7 +2,8 @@ use crate::clock;
 use crate::database;
 
 pub trait AppState: Clone + Send + Sync + 'static {
-  type DB: database::Database + Sync + Send;
+  type ConnectionType: Sync + Send;
+  type DB: database::Database<Self::ConnectionType> + Sync + Send;
   type Clock: clock::Clock + Sync + Send;
 
   fn db(&self) -> &Self::DB;
@@ -25,6 +26,7 @@ impl TestState {
 }
 
 impl AppState for TestState {
+  type ConnectionType = ();
   type DB = database::InMemoryDB;
   fn db(&self) -> &Self::DB {
     &self.db

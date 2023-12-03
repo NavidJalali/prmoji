@@ -25,16 +25,6 @@ enum Emoji {
   Custom(String),
 }
 
-#[async_trait::async_trait]
-trait App {
-  async fn handle_message(message: String) -> Result<(), String>;
-}
-
-#[async_trait::async_trait]
-trait Slack {
-  async fn add_emoji() -> Result<(), String>;
-}
-
 pub fn make_router<S: AppState>(state: S) -> Router {
   Router::new()
     .route("/", post(handlers::event::<S>))
