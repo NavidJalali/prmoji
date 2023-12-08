@@ -42,12 +42,12 @@ impl Database<()> for InMemoryDB {
     f(()).await
   }
 
-  async fn list(&self, connection: &mut ()) -> Vec<PR> {
+  async fn list(&self, _: &mut ()) -> Vec<PR> {
     let items = self.items.read().await;
     items.values().cloned().collect()
   }
 
-  async fn insert_all(&self, prs: Vec<PR>, connection: &mut ()) {
+  async fn insert_all(&self, prs: Vec<PR>, _: &mut ()) {
     let mut items = self.items.write().await;
     for pr in prs {
       let key = (pr.url.clone(), pr.channel.clone());
@@ -55,7 +55,7 @@ impl Database<()> for InMemoryDB {
     }
   }
 
-  async fn delete_all(&self, to_deletes: Vec<ToDelete>, connection: &mut ()) {
+  async fn delete_all(&self, to_deletes: Vec<ToDelete>, _: &mut ()) {
     let mut items = self.items.write().await;
     for to_delete in to_deletes {
       let key = (to_delete.url.clone(), to_delete.channel.clone());

@@ -1,16 +1,26 @@
+use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Serialize;
 
+static PR_REGEX: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/pull\/\d+").unwrap()
+});
+
 pub fn extract_pr_urls(message: &String) -> Vec<PrUrl> {
-  let re =
-    Regex::new(r"https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/pull\/\d+").unwrap();
-  re.captures_iter(message)
+  PR_REGEX
+    .captures_iter(message)
     .map(|cap| PrUrl(cap[0].to_string()))
     .collect()
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize)]
-pub struct PrUrl(String);
+pub struct PrUrl(pub String);
+
+impl From<&str> for PrUrl {
+  fn from(s: &str) -> Self {
+    PrUrl(s.to_string())
+  }
+}
 
 #[cfg(test)]
 mod tests {
