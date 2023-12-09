@@ -1,3 +1,5 @@
+use std::path::Display;
+
 use serde::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -69,6 +71,64 @@ pub enum WebookCallback {
 pub enum Response {
   Ok,
   ChallengeReply { challenge: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Emoji {
+  Merged,
+  Deleted,
+  Approved,
+  Comment,
+  ChangeRequest,
+  Custom(String),
+}
+
+impl Serialize for Emoji {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: serde::Serializer,
+  {
+    match self {
+      Emoji::Merged => serializer.serialize_str("shipit"),
+      Emoji::Deleted => serializer.serialize_str("wastebasket"),
+      Emoji::Approved => serializer.serialize_str("white_check_mark"),
+      Emoji::Comment => serializer.serialize_str("scroll"),
+      Emoji::ChangeRequest => serializer.serialize_str("warning"),
+      Emoji::Custom(s) => serializer.serialize_str(s),
+    }
+  }
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub struct AddReactionRequest {
+  channel: String,
+  name: Emoji,
+  timestamp: String,
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct SlackResponse {
+  pub ok: bool,
+  pub error: Option<String>,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct Credentials {
+  pub bot_token: String,
+}
+
+impl std::fmt::Display for Credentials {
+  fn fmt(&self, f: &mut __private::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.bot_token)
+  }
+}
+
+impl Credentials {
+  pub fn from_environment() -> Self {
+    let bot_token = std::env::var("SLACK_BOT_TOKEN").expect("SLACK_BOT_TOKEN not set");
+    Self { bot_token }
+  }
 }
 
 #[cfg(test)]

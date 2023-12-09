@@ -9,6 +9,7 @@ edition = "2021"
 async-trait = "0.1.73"
 axum = "0.7.1"
 chrono = { version = "0.4.31", features = ["serde"] }
+dotenv = "0.15.0"
 futures = "0.3.28"
 once_cell = "1.18.0"
 regex = "1.9.5"

@@ -1,6 +1,6 @@
 use crate::database::Database;
 use crate::models::*;
-use crate::slack;
+use crate::slack::models as slack_models;
 use crate::AppState;
 use axum::extract::State;
 use axum::http::HeaderMap;
@@ -26,16 +26,16 @@ pub async fn debug<S: AppState>(headers: HeaderMap, Json(payload): Json<serde_js
 
 pub async fn event<S: AppState>(
   state: State<S>,
-  Json(payload): Json<slack::WebookCallback>,
-) -> Json<slack::Response> {
+  Json(payload): Json<slack_models::WebookCallback>,
+) -> Json<slack_models::Response> {
   info!("Received payload: {:?}", payload);
   match payload {
-    slack::WebookCallback::UrlVerification { challenge, .. } => {
-      Json(slack::Response::ChallengeReply { challenge })
+    slack_models::WebookCallback::UrlVerification { challenge, .. } => {
+      Json(slack_models::Response::ChallengeReply { challenge })
     }
-    slack::WebookCallback::EventCallback { event, .. } => {
+    slack_models::WebookCallback::EventCallback { event, .. } => {
       match event {
-        slack::Event::Create(message) => {
+        slack_models::Event::Create(message) => {
           let prs = PR::from_message(&message.text.0, &message.channel.0, state.clock());
           let db = state.db();
 
@@ -47,8 +47,8 @@ pub async fn event<S: AppState>(
             .await
           }
         }
-        slack::Event::Update(update) => match update {
-          slack::MessageUpdate::MessageChanged {
+        slack_models::Event::Update(update) => match update {
+          slack_models::MessageUpdate::MessageChanged {
             message,
             previous_message,
             channel,
@@ -80,7 +80,7 @@ pub async fn event<S: AppState>(
                 .await
             }
           }
-          slack::MessageUpdate::MessageDeleted {
+          slack_models::MessageUpdate::MessageDeleted {
             channel,
             channel_type: _,
             event_ts: _,
@@ -98,7 +98,7 @@ pub async fn event<S: AppState>(
           }
         },
       }
-      Json(slack::Response::Ok)
+      Json(slack_models::Response::Ok)
     }
   }
 }

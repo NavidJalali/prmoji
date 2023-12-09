@@ -18,14 +18,6 @@ mod models;
 mod slack;
 mod url_extractor;
 
-enum Emoji {
-  Merged,
-  Deleted,
-  Approved,
-  Comments,
-  Custom(String),
-}
-
 pub fn make_router<S: AppState>(state: S) -> Router {
   Router::new()
     .route("/", post(handlers::event::<S>))
@@ -36,6 +28,8 @@ pub fn make_router<S: AppState>(state: S) -> Router {
 
 #[tokio::main]
 async fn main() {
+  dotenv::dotenv().ok();
+
   let subscriber = FmtSubscriber::builder()
     .with_max_level(Level::DEBUG)
     .finish();
