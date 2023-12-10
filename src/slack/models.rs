@@ -135,7 +135,7 @@ mod tests {
 
   #[test]
   fn can_parse_deletes() {
-    let delete_json_path = "./test_resources/delete.json";
+    let delete_json_path = "./test_resources/slack/delete.json";
     let delete_json = std::fs::read_to_string(delete_json_path).unwrap();
     let delete_message: WebookCallback = serde_json::from_str(&delete_json).unwrap();
     assert_eq!(
@@ -156,7 +156,7 @@ mod tests {
 
   #[test]
   fn can_parse_creates() {
-    let create_json_path = "./test_resources/create.json";
+    let create_json_path = "./test_resources/slack/create.json";
     let create_json = std::fs::read_to_string(create_json_path).unwrap();
     let create_message: WebookCallback = serde_json::from_str(&create_json).unwrap();
     assert_eq!(
@@ -174,7 +174,7 @@ mod tests {
 
   #[test]
   fn can_parse_edits() {
-    let edit_json_path = "./test_resources/edit.json";
+    let edit_json_path = "./test_resources/slack/edit.json";
     let edit_json = std::fs::read_to_string(edit_json_path).unwrap();
     let edit_message: WebookCallback = serde_json::from_str(&edit_json).unwrap();
     assert_eq!(

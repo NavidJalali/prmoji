@@ -195,7 +195,7 @@ mod tests {
   use super::*;
   #[test]
   fn can_detect_approved() {
-    let raw_event: RawGitHubEvent = load_raw("gh-jsons/approved.json");
+    let raw_event: RawGitHubEvent = load_raw("test_resources/github/approved.json");
     let header = EventTypeHeader::from_raw("pull_request_review").unwrap();
     let event = GitHubEvent::from_raw(header, raw_event).unwrap();
 
@@ -214,7 +214,7 @@ mod tests {
 
   #[test]
   fn can_detect_changes_requested() {
-    let raw_event: RawGitHubEvent = load_raw("gh-jsons/request-changes.json");
+    let raw_event: RawGitHubEvent = load_raw("test_resources/github/request-changes.json");
     let header = EventTypeHeader::from_raw("pull_request_review").unwrap();
     let event = GitHubEvent::from_raw(header, raw_event).unwrap();
 
@@ -233,7 +233,7 @@ mod tests {
 
   #[test]
   fn can_detect_commented() {
-    let raw_event: RawGitHubEvent = load_raw("gh-jsons/comment.json");
+    let raw_event: RawGitHubEvent = load_raw("test_resources/github/comment.json");
     let header = EventTypeHeader::from_raw("issue_comment").unwrap();
     let event = GitHubEvent::from_raw(header, raw_event).unwrap();
 
@@ -252,7 +252,7 @@ mod tests {
 
   #[test]
   fn can_detect_merged() {
-    let raw_event: RawGitHubEvent = load_raw("gh-jsons/merge.json");
+    let raw_event: RawGitHubEvent = load_raw("test_resources/github/merge.json");
     let header = EventTypeHeader::from_raw("pull_request").unwrap();
     let event = GitHubEvent::from_raw(header, raw_event).unwrap();
 
@@ -267,7 +267,7 @@ mod tests {
 
   #[test]
   fn can_detect_closed() {
-    let raw_event: RawGitHubEvent = load_raw("gh-jsons/close.json");
+    let raw_event: RawGitHubEvent = load_raw("test_resources/github/close.json");
     let header = EventTypeHeader::from_raw("pull_request").unwrap();
     let event = GitHubEvent::from_raw(header, raw_event).unwrap();
 
