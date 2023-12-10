@@ -1,5 +1,3 @@
-use std::path::Display;
-
 use serde::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -9,7 +7,7 @@ pub enum ChannelType {
   Group,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Channel(pub String);
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -102,9 +100,9 @@ impl Serialize for Emoji {
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub struct AddReactionRequest {
-  channel: String,
-  name: Emoji,
-  timestamp: String,
+  pub channel: Channel,
+  pub name: Emoji,
+  pub timestamp: Timestamp,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]

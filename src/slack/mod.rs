@@ -1,15 +1,18 @@
 pub mod models;
 
+use std::sync::Arc;
+
 use models::*;
 
-enum SlackClientError {
+#[derive(Debug)]
+pub enum SlackClientError {
   ClientSendError(reqwest::Error),
   CannotReadBody(reqwest::Error),
   UnexpectedResponse(reqwest::StatusCode, SlackResponse),
 }
 
 #[async_trait::async_trait]
-trait SlackClient {
+pub trait SlackClient {
   async fn add_reaction(
     &self,
     payload: AddReactionRequest,
@@ -17,9 +20,21 @@ trait SlackClient {
   //async fn send_message(&self, channel: &Channel, text: &Text) -> ();
 }
 
+#[derive(Clone)]
 pub struct LiveSlackClient {
   credentials: Credentials,
-  http_client: reqwest::Client,
+  http_client: Arc<reqwest::Client>,
+}
+
+impl LiveSlackClient {
+  pub fn new() -> Self {
+    let credentials = Credentials::from_environment();
+    let http_client = Arc::new(reqwest::Client::new());
+    Self {
+      credentials,
+      http_client,
+    }
+  }
 }
 
 #[async_trait::async_trait]

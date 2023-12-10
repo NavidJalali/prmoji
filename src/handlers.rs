@@ -1,16 +1,47 @@
-use crate::database::Database;
-use crate::models::*;
-use crate::slack::models as slack_models;
+use crate::clock::Clock;
+use crate::database::PrRepository;
+use crate::slack::models::{self as slack_models, Emoji};
+use crate::slack::SlackClient;
+use crate::url_extractor::extract_pr_urls;
 use crate::AppState;
+use crate::{github, models::*};
 use axum::extract::State;
-use axum::http::HeaderMap;
+use axum::http::{status, HeaderMap, Response};
+use axum::response::IntoResponse;
 use axum::Json;
 use tracing::info;
 
+#[derive(serde::Serialize, Clone, Copy)]
+pub struct ApiError {
+  pub message: &'static str,
+  pub status_code: u16,
+}
+
+impl ApiError {
+  pub fn new(message: &'static str, status_code: u16) -> Self {
+    Self {
+      message,
+      status_code,
+    }
+  }
+}
+
+impl IntoResponse for ApiError {
+  fn into_response(self) -> axum::response::Response {
+    let status_code = status::StatusCode::from_u16(self.status_code).unwrap();
+    let body = serde_json::to_string(&self).unwrap();
+    Response::builder()
+      .status(status_code)
+      .header("Content-Type", "application/json")
+      .body(body.into())
+      .unwrap()
+  }
+}
+
 pub async fn list<S: AppState>(state: State<S>) -> Json<Vec<PR>> {
-  let db = state.db();
-  let prs = db
-    .transactionally(|mut connection| async move { db.list(&mut connection).await })
+  let repo = state.pr_repository();
+  let prs = repo
+    .transactionally(|mut connection| async move { repo.list(&mut connection).await })
     .await;
   Json(prs)
 }
@@ -24,7 +55,69 @@ pub async fn debug<S: AppState>(headers: HeaderMap, Json(payload): Json<serde_js
   info!("Received payload: {}", payload.to_string());
 }
 
-pub async fn event<S: AppState>(
+pub async fn handle_github_event<S: AppState>(
+  state: State<S>,
+  headers: HeaderMap,
+  Json(payload): Json<github::RawGitHubEvent>,
+) -> Result<(), ApiError> {
+  let x_github_event = headers
+    .get("X-GitHub-Event")
+    .ok_or(ApiError::new("Missing X-GitHub-Event header", 400))?
+    .to_str()
+    .map(|raw| github::EventTypeHeader::from_raw(raw))
+    .map_err(|_| ApiError::new("Invalid X-GitHub-Event header", 400))?;
+
+  // If None we are not interested in this event
+  let x_github_event = match x_github_event {
+    Some(event) => event,
+    None => return Ok(()),
+  };
+
+  let github_event = github::GitHubEvent::from_raw(x_github_event, payload);
+
+  // If None we are not interested in this event
+  let github::GitHubEvent { pr_url, event_type } = match github_event {
+    Some(event) => event,
+    None => return Ok(()),
+  };
+
+  let emoji = match event_type {
+    github::GitHubEventType::Closed => Emoji::Deleted,
+    github::GitHubEventType::Merged => Emoji::Merged,
+    github::GitHubEventType::Commented { commenter: _ } => Emoji::Comment,
+    github::GitHubEventType::ChangesRequested { reviewer: _ } => Emoji::ChangeRequest,
+    github::GitHubEventType::Approved { approver: _ } => Emoji::Approved,
+  };
+
+  let repo = state.pr_repository();
+
+  let prs = repo
+    .transactionally(|mut connection| async move { repo.get_by_url(pr_url, &mut connection).await })
+    .await;
+
+  let slack = state.slack_client();
+
+  let reactions = prs.into_iter().map(|pr| {
+    slack.add_reaction(slack_models::AddReactionRequest {
+      channel: pr.channel,
+      name: emoji.clone(),
+      timestamp: pr.timestamp,
+    })
+  });
+
+  let results = futures::future::join_all(reactions).await;
+
+  for result in results {
+    match result {
+      Ok(_) => info!("Successfully added reaction"),
+      Err(err) => info!("Failed to add reaction: {:?}", err),
+    }
+  }
+
+  Ok(())
+}
+
+pub async fn handle_slack_event<S: AppState>(
   state: State<S>,
   Json(payload): Json<slack_models::WebookCallback>,
 ) -> Json<slack_models::Response> {
@@ -36,64 +129,86 @@ pub async fn event<S: AppState>(
     slack_models::WebookCallback::EventCallback { event, .. } => {
       match event {
         slack_models::Event::Create(message) => {
-          let prs = PR::from_message(&message.text.0, &message.channel.0, state.clock());
-          let db = state.db();
+          let to_insert = ToInsert::new(
+            extract_pr_urls(&message.text.0),
+            message.channel,
+            message.event_ts,
+            state.clock().now(),
+          );
 
-          if !prs.is_empty() {
-            info!("Extracted prs: {:?}", prs);
-            db.transactionally(
-              |mut connection| async move { db.insert_all(prs, &mut connection).await },
-            )
+          let db = state.pr_repository();
+
+          if let Some(to_insert) = to_insert {
+            info!("Extracted to_insert: {:?}", to_insert);
+            db.transactionally(|mut connection| async move {
+              db.insert_all(to_insert, &mut connection).await
+            })
             .await
           }
         }
+
         slack_models::Event::Update(update) => match update {
           slack_models::MessageUpdate::MessageChanged {
             message,
             previous_message,
             channel,
             channel_type: _,
-            event_ts: _,
+            event_ts,
           } => {
             info!("Received message update: {:?}", message);
 
-            let to_delete = ToDelete::from_message(&previous_message.text.0, &channel.0);
-            let prs = PR::from_message(&message.text.0, &channel.0, state.clock());
+            let clock = state.clock();
 
-            if !to_delete.is_empty() && !prs.is_empty() {
+            let to_delete = ToDelete::new(
+              extract_pr_urls(&previous_message.text.0),
+              channel.clone(),
+              event_ts.clone(),
+            );
+
+            let to_insert = ToInsert::new(
+              extract_pr_urls(&message.text.0),
+              channel,
+              event_ts,
+              clock.now(),
+            );
+
+            if !(to_delete.is_none() && to_insert.is_none()) {
               info!("Extracted to_delete: {:?}", to_delete);
-              info!("Extracted prs: {:?}", prs);
+              info!("Extracted to_insert: {:?}", to_insert);
 
-              let db = state.db();
+              let repo = state.pr_repository();
 
-              state
-                .db()
+              repo
                 .transactionally(|mut connection| async move {
-                  if !to_delete.is_empty() {
-                    db.delete_all(to_delete, &mut connection).await
+                  if let Some(to_delete) = to_delete {
+                    repo.delete_all(to_delete, &mut connection).await
                   }
 
-                  if !prs.is_empty() {
-                    db.insert_all(prs, &mut connection).await
+                  if let Some(to_insert) = to_insert {
+                    repo.insert_all(to_insert, &mut connection).await
                   }
                 })
                 .await
             }
           }
+
           slack_models::MessageUpdate::MessageDeleted {
             channel,
             channel_type: _,
-            event_ts: _,
+            event_ts,
             previous_message,
           } => {
-            let to_delete = ToDelete::from_message(&previous_message.text.0, &channel.0);
-            if !to_delete.is_empty() {
+            let to_delete =
+              ToDelete::new(extract_pr_urls(&previous_message.text.0), channel, event_ts);
+
+            if let Some(to_delete) = to_delete {
               info!("Extracted to_delete: {:?}", to_delete);
-              let db = state.db();
-              db.transactionally(|mut connection| async move {
-                db.delete_all(to_delete, &mut connection).await
-              })
-              .await
+              let repo = state.pr_repository();
+              repo
+                .transactionally(|mut connection| async move {
+                  repo.delete_all(to_delete, &mut connection).await
+                })
+                .await
             }
           }
         },

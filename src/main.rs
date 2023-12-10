@@ -20,9 +20,9 @@ mod url_extractor;
 
 pub fn make_router<S: AppState>(state: S) -> Router {
   Router::new()
-    .route("/", post(handlers::event::<S>))
+    .route("/slack", post(handlers::handle_slack_event::<S>))
     .route("/", get(handlers::list::<S>))
-    .route("/github", post(handlers::debug::<S>))
+    .route("/github", post(handlers::handle_github_event::<S>))
     .with_state(state)
 }
 

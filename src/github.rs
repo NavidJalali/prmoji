@@ -1,7 +1,6 @@
 use serde::{self, Deserialize};
 
-use crate::url_extractor::PrUrl;
-
+use crate::models::PrUrl;
 /*
  * We are only interested in the following events:
  * - A PR is closed -> pull_request
@@ -12,14 +11,14 @@ use crate::url_extractor::PrUrl;
  */
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum EventTypeHeader {
+pub enum EventTypeHeader {
   PullRequest,
   IssueComment,
   PullRequestReview,
 }
 
 impl EventTypeHeader {
-  fn from_raw(s: &str) -> Option<Self> {
+  pub fn from_raw(s: &str) -> Option<Self> {
     match s {
       "pull_request" => Some(EventTypeHeader::PullRequest),
       "issue_comment" => Some(EventTypeHeader::IssueComment),
@@ -30,7 +29,7 @@ impl EventTypeHeader {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum ActionField {
+pub enum ActionField {
   Opened,    // PR opened
   Created,   // PR comment created
   Closed,    // PR closed, PR merged
@@ -58,12 +57,12 @@ impl<'de> Deserialize<'de> for ActionField {
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-struct Href {
+pub struct Href {
   href: String,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-struct PullRequestLinks {
+pub struct PullRequestLinks {
   html: Href,
 }
 
@@ -73,7 +72,7 @@ pub struct User {
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-struct PullRequest {
+pub struct PullRequest {
   _links: PullRequestLinks,
   number: u32,
   merged_at: Option<String>,
@@ -82,33 +81,33 @@ struct PullRequest {
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-struct Repository {
+pub struct Repository {
   full_name: String,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-struct Review {
+pub struct Review {
   state: String,
   user: Option<User>,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-struct Comment {
+pub struct Comment {
   user: Option<User>,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-struct IssuePullRequest {
+pub struct IssuePullRequest {
   html_url: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-struct Issue {
+pub struct Issue {
   pull_request: Option<IssuePullRequest>,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-struct RawGitHubEvent {
+pub struct RawGitHubEvent {
   action: ActionField,
   pull_request: Option<PullRequest>,
   repository: Repository,
@@ -135,27 +134,37 @@ impl RawGitHubEvent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum GitHubEvent {
-  Closed { pr_url: PrUrl },
-  Merged { pr_url: PrUrl },
-  Commented { pr_url: PrUrl, commenter: User },
-  ChangesRequested { pr_url: PrUrl, reviewer: User },
-  Approved { pr_url: PrUrl, approver: User },
+pub struct GitHubEvent {
+  pub pr_url: PrUrl,
+  pub event_type: GitHubEventType,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GitHubEventType {
+  Closed,
+  Merged,
+  Commented { commenter: User },
+  ChangesRequested { reviewer: User },
+  Approved { approver: User },
 }
 
 impl GitHubEvent {
-  fn from_raw(event_type: EventTypeHeader, raw_event: RawGitHubEvent) -> Option<Self> {
+  pub fn new(pr_url: PrUrl, event_type: GitHubEventType) -> Self {
+    Self { pr_url, event_type }
+  }
+
+  pub fn from_raw(event_type: EventTypeHeader, raw_event: RawGitHubEvent) -> Option<Self> {
     let pr_url = raw_event.get_pr_url()?;
-    match (event_type, &raw_event.action) {
+    let event_type = match (event_type, &raw_event.action) {
       (EventTypeHeader::IssueComment, ActionField::Created) => {
         let commenter = raw_event.comment?.user?;
-        Some(GitHubEvent::Commented { pr_url, commenter })
+        Some(GitHubEventType::Commented { commenter })
       }
       (EventTypeHeader::PullRequest, ActionField::Closed) => {
         let merged_at = raw_event.pull_request?.merged_at;
         match merged_at {
-          Some(_) => Some(GitHubEvent::Merged { pr_url }),
-          None => Some(GitHubEvent::Closed { pr_url }),
+          Some(_) => Some(GitHubEventType::Merged),
+          None => Some(GitHubEventType::Closed),
         }
       }
       (EventTypeHeader::PullRequestReview, ActionField::Submitted) => {
@@ -163,19 +172,15 @@ impl GitHubEvent {
         let user = review.user?;
         let state = review.state;
         match state.as_str() {
-          "changes_requested" => Some(GitHubEvent::ChangesRequested {
-            pr_url,
-            reviewer: user,
-          }),
-          "approved" => Some(GitHubEvent::Approved {
-            pr_url,
-            approver: user,
-          }),
+          "changes_requested" => Some(GitHubEventType::ChangesRequested { reviewer: user }),
+          "approved" => Some(GitHubEventType::Approved { approver: user }),
           _ => None,
         }
       }
       _ => None,
-    }
+    };
+
+    event_type.map(|event_type| Self::new(pr_url, event_type))
   }
 }
 
@@ -196,12 +201,14 @@ mod tests {
 
     assert_eq!(
       event,
-      GitHubEvent::Approved {
-        approver: User {
-          login: "rhalm".to_string()
-        },
-        pr_url: "https://github.com/NavidJalali/prmoji-testing/pull/2".into(),
-      }
+      GitHubEvent::new(
+        "https://github.com/NavidJalali/prmoji-testing/pull/2".into(),
+        GitHubEventType::Approved {
+          approver: User {
+            login: "rhalm".to_string()
+          },
+        }
+      )
     );
   }
 
@@ -213,12 +220,14 @@ mod tests {
 
     assert_eq!(
       event,
-      GitHubEvent::ChangesRequested {
-        reviewer: User {
-          login: "rhalm".to_string()
-        },
-        pr_url: "https://github.com/NavidJalali/prmoji-testing/pull/2".into(),
-      }
+      GitHubEvent::new(
+        "https://github.com/NavidJalali/prmoji-testing/pull/2".into(),
+        GitHubEventType::ChangesRequested {
+          reviewer: User {
+            login: "rhalm".to_string()
+          },
+        }
+      )
     );
   }
 
@@ -230,12 +239,14 @@ mod tests {
 
     assert_eq!(
       event,
-      GitHubEvent::Commented {
-        commenter: User {
-          login: "NavidJalali".to_string()
-        },
-        pr_url: "https://github.com/NavidJalali/prmoji-testing/pull/1".into(),
-      }
+      GitHubEvent::new(
+        "https://github.com/NavidJalali/prmoji-testing/pull/1".into(),
+        GitHubEventType::Commented {
+          commenter: User {
+            login: "NavidJalali".to_string()
+          },
+        }
+      )
     );
   }
 
@@ -247,9 +258,10 @@ mod tests {
 
     assert_eq!(
       event,
-      GitHubEvent::Merged {
-        pr_url: "https://github.com/NavidJalali/prmoji-testing/pull/1".into(),
-      }
+      GitHubEvent::new(
+        "https://github.com/NavidJalali/prmoji-testing/pull/1".into(),
+        GitHubEventType::Merged
+      )
     );
   }
 
@@ -261,9 +273,10 @@ mod tests {
 
     assert_eq!(
       event,
-      GitHubEvent::Closed {
-        pr_url: "https://github.com/NavidJalali/prmoji-testing/pull/1".into(),
-      }
+      GitHubEvent::new(
+        "https://github.com/NavidJalali/prmoji-testing/pull/1".into(),
+        GitHubEventType::Closed
+      )
     );
   }
 }
