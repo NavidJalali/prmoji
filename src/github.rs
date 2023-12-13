@@ -6,6 +6,7 @@ use crate::models::PrUrl;
  * - A PR is closed -> pull_request
  * - A PR is merged -> pull_request
  * - A comment is added to a PR -> issue_comment
+ * - PR review comment is added -> pull_request_review_comment
  * - A review is added to a PR -> pull_request_review
  * - A review is approved -> pull_request_review
  */
@@ -15,6 +16,7 @@ pub enum EventTypeHeader {
   PullRequest,
   IssueComment,
   PullRequestReview,
+  PullRequestReviewComment,
 }
 
 impl EventTypeHeader {
@@ -23,6 +25,7 @@ impl EventTypeHeader {
       "pull_request" => Some(EventTypeHeader::PullRequest),
       "issue_comment" => Some(EventTypeHeader::IssueComment),
       "pull_request_review" => Some(EventTypeHeader::PullRequestReview),
+      "pull_request_review_comment" => Some(EventTypeHeader::PullRequestReviewComment),
       _ => None,
     }
   }
@@ -157,6 +160,10 @@ impl GitHubEvent {
     let pr_url = raw_event.get_pr_url()?;
     let event_type = match (event_type, &raw_event.action) {
       (EventTypeHeader::IssueComment, ActionField::Created) => {
+        let commenter = raw_event.comment?.user?;
+        Some(GitHubEventType::Commented { commenter })
+      }
+      (EventTypeHeader::PullRequestReviewComment, ActionField::Created) => {
         let commenter = raw_event.comment?.user?;
         Some(GitHubEventType::Commented { commenter })
       }

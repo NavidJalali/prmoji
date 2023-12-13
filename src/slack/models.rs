@@ -14,7 +14,7 @@ pub struct Channel(pub String);
 pub struct Text(pub String);
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct Timestamp(String);
+pub struct Timestamp(pub String);
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct Message {
@@ -123,8 +123,8 @@ impl std::fmt::Display for Credentials {
 }
 
 impl Credentials {
-  pub fn from_environment() -> Self {
-    let bot_token = std::env::var("SLACK_BOT_TOKEN").expect("SLACK_BOT_TOKEN not set");
+  pub fn from_config(config: &crate::config::Slack) -> Self {
+    let bot_token = config.bot_token.clone();
     Self { bot_token }
   }
 }

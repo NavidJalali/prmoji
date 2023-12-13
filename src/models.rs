@@ -1,6 +1,9 @@
 use std::hash::Hash;
 
-use crate::slack::models::{Channel, Timestamp};
+use crate::{
+  persistence::models::PullRequestTable,
+  slack::models::{Channel, Timestamp},
+};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
@@ -17,12 +20,6 @@ impl From<&str> for PrUrl {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct PrId(pub Uuid);
 
-impl PrId {
-  pub fn random() -> Self {
-    Self(Uuid::new_v4())
-  }
-}
-
 impl Hash for PrId {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
     self.0.hash(state)
@@ -38,6 +35,18 @@ pub struct PR {
   pub timestamp: Timestamp,
 }
 
+impl From<PullRequestTable> for PR {
+  fn from(pr: PullRequestTable) -> Self {
+    Self {
+      id: PrId(pr.id),
+      url: PrUrl(pr.url),
+      inserted_at: pr.inserted_at,
+      channel: Channel(pr.channel),
+      timestamp: Timestamp(pr.timestamp),
+    }
+  }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ToDelete {
   pub urls: Vec<PrUrl>,
@@ -46,15 +55,11 @@ pub struct ToDelete {
 }
 
 impl ToDelete {
-  pub fn new(urls: Vec<PrUrl>, channel: Channel, timestamp: Timestamp) -> Option<Self> {
-    if urls.is_empty() {
-      None
-    } else {
-      Some(Self {
-        urls,
-        channel,
-        timestamp,
-      })
+  pub fn new(urls: Vec<PrUrl>, channel: Channel, timestamp: Timestamp) -> Self {
+    Self {
+      urls,
+      channel,
+      timestamp,
     }
   }
 }
@@ -73,16 +78,12 @@ impl ToInsert {
     channel: Channel,
     timestamp: Timestamp,
     inserted_at: DateTime<Utc>,
-  ) -> Option<Self> {
-    if urls.is_empty() {
-      None
-    } else {
-      Some(Self {
-        urls,
-        inserted_at,
-        channel,
-        timestamp,
-      })
+  ) -> Self {
+    Self {
+      urls,
+      inserted_at,
+      channel,
+      timestamp,
     }
   }
 }

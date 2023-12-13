@@ -1,5 +1,5 @@
 use crate::clock::Clock;
-use crate::database::PrRepository;
+use crate::persistence::pr_repository::PrRepository;
 use crate::slack::models::{self as slack_models, Emoji};
 use crate::slack::SlackClient;
 use crate::url_extractor::extract_pr_urls;
@@ -40,9 +40,7 @@ impl IntoResponse for ApiError {
 
 pub async fn list<S: AppState>(state: State<S>) -> Json<Vec<PR>> {
   let repo = state.pr_repository();
-  let prs = repo
-    .transactionally(|mut connection| async move { repo.list(&mut connection).await })
-    .await;
+  let prs = repo.list().await;
   Json(prs)
 }
 
@@ -60,6 +58,9 @@ pub async fn handle_github_event<S: AppState>(
   headers: HeaderMap,
   Json(payload): Json<github::RawGitHubEvent>,
 ) -> Result<(), ApiError> {
+  info!("Received headers: {:?}", headers);
+  info!("Received payload: {:?}", payload);
+
   let x_github_event = headers
     .get("X-GitHub-Event")
     .ok_or(ApiError::new("Missing X-GitHub-Event header", 400))?
@@ -81,6 +82,8 @@ pub async fn handle_github_event<S: AppState>(
     None => return Ok(()),
   };
 
+  info!("Received {:?} for {:?}", event_type, pr_url);
+
   let emoji = match event_type {
     github::GitHubEventType::Closed => Emoji::Deleted,
     github::GitHubEventType::Merged => Emoji::Merged,
@@ -91,9 +94,7 @@ pub async fn handle_github_event<S: AppState>(
 
   let repo = state.pr_repository();
 
-  let prs = repo
-    .transactionally(|mut connection| async move { repo.get_by_url(pr_url, &mut connection).await })
-    .await;
+  let prs = repo.get_by_url(pr_url).await;
 
   let slack = state.slack_client();
 
@@ -136,15 +137,10 @@ pub async fn handle_slack_event<S: AppState>(
             state.clock().now(),
           );
 
-          let db = state.pr_repository();
+          let repo = state.pr_repository();
 
-          if let Some(to_insert) = to_insert {
-            info!("Extracted to_insert: {:?}", to_insert);
-            db.transactionally(|mut connection| async move {
-              db.insert_all(to_insert, &mut connection).await
-            })
-            .await
-          }
+          info!("Extracted to_insert: {:?}", to_insert);
+          repo.insert_all(to_insert).await
         }
 
         slack_models::Event::Update(update) => match update {
@@ -172,24 +168,12 @@ pub async fn handle_slack_event<S: AppState>(
               clock.now(),
             );
 
-            if !(to_delete.is_none() && to_insert.is_none()) {
-              info!("Extracted to_delete: {:?}", to_delete);
-              info!("Extracted to_insert: {:?}", to_insert);
+            info!("Extracted to_delete: {:?}", to_delete);
+            info!("Extracted to_insert: {:?}", to_insert);
 
-              let repo = state.pr_repository();
+            let repo = state.pr_repository();
 
-              repo
-                .transactionally(|mut connection| async move {
-                  if let Some(to_delete) = to_delete {
-                    repo.delete_all(to_delete, &mut connection).await
-                  }
-
-                  if let Some(to_insert) = to_insert {
-                    repo.insert_all(to_insert, &mut connection).await
-                  }
-                })
-                .await
-            }
+            repo.update(to_insert, to_delete).await
           }
 
           slack_models::MessageUpdate::MessageDeleted {
@@ -201,15 +185,9 @@ pub async fn handle_slack_event<S: AppState>(
             let to_delete =
               ToDelete::new(extract_pr_urls(&previous_message.text.0), channel, event_ts);
 
-            if let Some(to_delete) = to_delete {
-              info!("Extracted to_delete: {:?}", to_delete);
-              let repo = state.pr_repository();
-              repo
-                .transactionally(|mut connection| async move {
-                  repo.delete_all(to_delete, &mut connection).await
-                })
-                .await
-            }
+            info!("Extracted to_delete: {:?}", to_delete);
+            let repo = state.pr_repository();
+            repo.delete_all(to_delete).await
           }
         },
       }

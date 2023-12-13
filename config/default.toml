@@ -1,0 +1,11 @@
+[server]
+host = "localhost"
+port = 3000
+
+[database]
+host = "localhost"
+port = 5432
+user = "postgres"
+password = "deadbeef"
+database = "postgres"
+pool_size = 8

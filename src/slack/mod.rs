@@ -27,8 +27,8 @@ pub struct LiveSlackClient {
 }
 
 impl LiveSlackClient {
-  pub fn new() -> Self {
-    let credentials = Credentials::from_environment();
+  pub fn new(config: &crate::config::Slack) -> Self {
+    let credentials = Credentials::from_config(config);
     let http_client = Arc::new(reqwest::Client::new());
     Self {
       credentials,
