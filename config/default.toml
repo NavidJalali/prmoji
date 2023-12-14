@@ -9,3 +9,10 @@ user = "postgres"
 password = "deadbeef"
 database = "postgres"
 pool_size = 8
+
+[emojis]
+merged = "shipit"
+closed = "wastebasket"
+commented = "speech_balloon"
+approved = "white_check_mark"
+changes_requested = "construction"

@@ -26,7 +26,7 @@ impl TestState {
   pub async fn new(config: &Configuration) -> Self {
     Self {
       clock: clock::LiveClock,
-      slack_client: slack::LiveSlackClient::new(&config.slack),
+      slack_client: slack::LiveSlackClient::new(&config),
       config: config.clone(),
       pr_repository: pr_repository::LivePrRepository::new(&config.database).await,
     }

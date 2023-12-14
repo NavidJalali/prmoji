@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -71,38 +73,30 @@ pub enum Response {
   ChallengeReply { challenge: String },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Emoji {
   Merged,
   Deleted,
   Approved,
   Comment,
   ChangeRequest,
-  Custom(String),
 }
 
-impl Serialize for Emoji {
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-  where
-    S: serde::Serializer,
-  {
-    match self {
-      Emoji::Merged => serializer.serialize_str("shipit"),
-      Emoji::Deleted => serializer.serialize_str("wastebasket"),
-      Emoji::Approved => serializer.serialize_str("white_check_mark"),
-      Emoji::Comment => serializer.serialize_str("scroll"),
-      Emoji::ChangeRequest => serializer.serialize_str("warning"),
-      Emoji::Custom(s) => serializer.serialize_str(s),
-    }
-  }
-}
-
-#[derive(Serialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AddReactionRequest {
   pub channel: Channel,
   pub name: Emoji,
   pub timestamp: Timestamp,
+}
+
+impl AddReactionRequest {
+  pub fn as_json(self, config: &crate::config::Emojis) -> HashMap<&'static str, String> {
+    let mut map = HashMap::new();
+    map.insert("channel", self.channel.0);
+    map.insert("name", config.get(self.name));
+    map.insert("timestamp", self.timestamp.0);
+    map
+  }
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]

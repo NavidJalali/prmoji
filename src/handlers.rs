@@ -11,7 +11,7 @@ use axum::extract::State;
 use axum::http::{status, HeaderMap, Response};
 use axum::response::IntoResponse;
 use axum::Json;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[derive(serde::Serialize, Clone, Copy)]
 pub struct ApiError {
@@ -46,23 +46,11 @@ pub async fn list<S: AppState>(state: State<S>) -> Json<Vec<PR>> {
   Json(prs)
 }
 
-pub async fn debug<S: AppState>(headers: HeaderMap, Json(payload): Json<serde_json::Value>) {
-  let headers = headers
-    .iter()
-    .map(|(key, value)| (key.to_string(), value.to_str().unwrap().to_string()))
-    .collect::<Vec<(String, String)>>();
-  info!("Received headers: {:?}", headers);
-  info!("Received payload: {}", payload.to_string());
-}
-
 pub async fn handle_github_event<S: AppState>(
   state: State<S>,
   headers: HeaderMap,
   payload: Bytes,
 ) -> Result<(), ApiError> {
-  info!("Received headers: {:?}", headers);
-  info!("Received payload: {:?}", payload);
-
   let x_hub_signature = headers
     .get("x-hub-signature-256")
     .ok_or(ApiError::new("Missing X-Hub-Signature-256 header", 401))?
@@ -142,7 +130,7 @@ pub async fn handle_github_event<S: AppState>(
   for result in results {
     match result {
       Ok(_) => info!("Successfully added reaction"),
-      Err(err) => info!("Failed to add reaction: {:?}", err),
+      Err(err) => warn!("Failed to add reaction: {:?}", err),
     }
   }
 

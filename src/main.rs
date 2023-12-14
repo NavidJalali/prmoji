@@ -38,8 +38,6 @@ async fn main() {
 
   let config = Configuration::new().unwrap();
 
-  println!("{:?}", config);
-
   let subscriber = FmtSubscriber::builder()
     .with_max_level(Level::DEBUG)
     .finish();

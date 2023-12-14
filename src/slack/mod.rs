@@ -4,6 +4,8 @@ use std::sync::Arc;
 
 use models::*;
 
+use crate::config::Emojis;
+
 #[derive(Debug)]
 pub enum SlackClientError {
   ClientSendError(reqwest::Error),
@@ -23,15 +25,18 @@ pub trait SlackClient {
 #[derive(Clone)]
 pub struct LiveSlackClient {
   credentials: Credentials,
+  emojis: Emojis,
   http_client: Arc<reqwest::Client>,
 }
 
 impl LiveSlackClient {
-  pub fn new(config: &crate::config::Slack) -> Self {
-    let credentials = Credentials::from_config(config);
+  pub fn new(config: &crate::config::Configuration) -> Self {
+    let credentials = Credentials::from_config(&config.slack);
+    let emojis = config.emojis.clone();
     let http_client = Arc::new(reqwest::Client::new());
     Self {
       credentials,
+      emojis,
       http_client,
     }
   }
@@ -46,7 +51,7 @@ impl SlackClient for LiveSlackClient {
     let response = self
       .http_client
       .post("https://slack.com/api/reactions.add")
-      .json(&payload)
+      .json(&payload.as_json(&self.emojis))
       .bearer_auth(&self.credentials.bot_token)
       .send()
       .await

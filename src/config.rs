@@ -1,6 +1,8 @@
 use config::{Config, ConfigError, Environment, File};
 use serde::Deserialize;
 
+use crate::slack::models::Emoji;
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Server {
   pub host: String,
@@ -56,11 +58,33 @@ impl Database {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct Emojis {
+  pub merged: String,
+  pub closed: String,
+  pub approved: String,
+  pub commented: String,
+  pub changes_requested: String,
+}
+
+impl Emojis {
+  pub fn get(&self, emoji: Emoji) -> String {
+    match emoji {
+      Emoji::Merged => self.merged.clone(),
+      Emoji::Deleted => self.closed.clone(),
+      Emoji::Approved => self.approved.clone(),
+      Emoji::Comment => self.commented.clone(),
+      Emoji::ChangeRequest => self.changes_requested.clone(),
+    }
+  }
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct Configuration {
   pub server: Server,
   pub slack: Slack,
   pub database: Database,
   pub github: Github,
+  pub emojis: Emojis,
 }
 
 impl Configuration {
