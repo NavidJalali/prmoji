@@ -6,12 +6,14 @@ use axum::{
   Router,
 };
 use tokio::net::TcpListener;
+use tower_http::trace::TraceLayer;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
 use crate::{app_state::TestState, config::Configuration};
 
 mod app_state;
+mod auth;
 mod clock;
 mod config;
 mod github;
@@ -27,6 +29,7 @@ pub fn make_router<S: AppState>(state: S) -> Router {
     .route("/", get(handlers::list::<S>))
     .route("/github", post(handlers::handle_github_event::<S>))
     .with_state(state)
+    .layer(TraceLayer::new_for_http())
 }
 
 #[tokio::main]

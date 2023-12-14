@@ -16,6 +16,13 @@ impl Server {
 #[derive(Debug, Deserialize, Clone)]
 pub struct Slack {
   pub bot_token: String,
+  signing_secret: String,
+}
+
+impl Slack {
+  pub fn signing_secret(&self) -> &[u8] {
+    self.signing_secret.as_bytes()
+  }
 }
 
 #[derive(Debug, Deserialize, Clone)]

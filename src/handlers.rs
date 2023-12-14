@@ -1,3 +1,4 @@
+use crate::auth::verify_slack_signature;
 use crate::clock::Clock;
 use crate::persistence::pr_repository::PrRepository;
 use crate::slack::models::{self as slack_models, Emoji};
@@ -5,11 +6,12 @@ use crate::slack::SlackClient;
 use crate::url_extractor::extract_pr_urls;
 use crate::AppState;
 use crate::{github, models::*};
+use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::{status, HeaderMap, Response};
 use axum::response::IntoResponse;
 use axum::Json;
-use tracing::info;
+use tracing::{error, info};
 
 #[derive(serde::Serialize, Clone, Copy)]
 pub struct ApiError {
@@ -120,12 +122,65 @@ pub async fn handle_github_event<S: AppState>(
 
 pub async fn handle_slack_event<S: AppState>(
   state: State<S>,
-  Json(payload): Json<slack_models::WebookCallback>,
-) -> Json<slack_models::Response> {
-  info!("Received payload: {:?}", payload);
+  headers: HeaderMap,
+  payload: Bytes,
+) -> Result<Json<slack_models::Response>, ApiError> {
+  let x_slack_signature = headers
+    .get("x-slack-signature")
+    .ok_or(ApiError::new("Missing X-Slack-Signature header", 401))?
+    .to_str()
+    .map_err(|_| ApiError::new("Invalid X-Slack-Signature header", 400))?
+    .strip_prefix("v0=")
+    .ok_or(ApiError::new("Invalid X-Slack-Signature header", 400))?;
+
+  let x_slack_signature = hex::decode(x_slack_signature).map_err(|_| {
+    error!("Failed to decode X-Slack-Signature header");
+    ApiError::new("Failed to decode X-Slack-Signature header", 400)
+  })?;
+
+  let x_slack_request_timestamp: i64 = headers
+    .get("x-slack-request-timestamp")
+    .ok_or(ApiError::new(
+      "Missing X-Slack-Request-Timestamp header",
+      401,
+    ))?
+    .to_str()
+    .map_err(|_| ApiError::new("Invalid X-Slack-Request-Timestamp header", 400))?
+    .parse()
+    .map_err(|_| ApiError::new("Invalid X-Slack-Request-Timestamp header", 400))?;
+
+  let now = state.clock().now().timestamp();
+
+  if now - x_slack_request_timestamp > 60 * 5 {
+    error!("X-Slack-Request-Timestamp header is too old");
+    return Err(ApiError::new(
+      "X-Slack-Request-Timestamp header is too old",
+      401,
+    ));
+  }
+
+  let signature = verify_slack_signature(
+    &state.config().slack.signing_secret(),
+    x_slack_request_timestamp,
+    payload.to_vec(),
+    x_slack_signature,
+  );
+
+  if !signature {
+    error!("Signature mismatch");
+    return Err(ApiError::new("Invalid signature", 401));
+  }
+
+  let payload = serde_json::from_slice::<slack_models::WebookCallback>(&payload).map_err(|e| {
+    error!("Failed to parse slack payload: {:?}", e);
+    ApiError::new("Failed to parse slack payload", 400)
+  })?;
+
+  info!("Received headers: {:?}", headers);
+  info!("Received slack payload: {:?}", payload);
   match payload {
     slack_models::WebookCallback::UrlVerification { challenge, .. } => {
-      Json(slack_models::Response::ChallengeReply { challenge })
+      Ok(Json(slack_models::Response::ChallengeReply { challenge }))
     }
     slack_models::WebookCallback::EventCallback { event, .. } => {
       match event {
@@ -191,7 +246,7 @@ pub async fn handle_slack_event<S: AppState>(
           }
         },
       }
-      Json(slack_models::Response::Ok)
+      Ok(Json(slack_models::Response::Ok))
     }
   }
 }
