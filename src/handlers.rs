@@ -1,4 +1,4 @@
-use crate::auth::verify_slack_signature;
+use crate::auth::{verify_github_signature, verify_slack_signature};
 use crate::clock::Clock;
 use crate::persistence::pr_repository::PrRepository;
 use crate::slack::models::{self as slack_models, Emoji};
@@ -58,10 +58,39 @@ pub async fn debug<S: AppState>(headers: HeaderMap, Json(payload): Json<serde_js
 pub async fn handle_github_event<S: AppState>(
   state: State<S>,
   headers: HeaderMap,
-  Json(payload): Json<github::RawGitHubEvent>,
+  payload: Bytes,
 ) -> Result<(), ApiError> {
   info!("Received headers: {:?}", headers);
   info!("Received payload: {:?}", payload);
+
+  let x_hub_signature = headers
+    .get("x-hub-signature-256")
+    .ok_or(ApiError::new("Missing X-Hub-Signature-256 header", 401))?
+    .to_str()
+    .map_err(|_| ApiError::new("Invalid X-Hub-Signature-256 header", 400))?
+    .strip_prefix("sha256=")
+    .ok_or(ApiError::new("Invalid X-Hub-Signature-256 header", 400))?;
+
+  let x_hub_signature = hex::decode(x_hub_signature).map_err(|err| {
+    error!("Failed to decode X-Hub-Signature-256 header: {:?}", err);
+    ApiError::new("Failed to decode X-Hub-Signature-256 header", 400)
+  })?;
+
+  let signature = verify_github_signature(
+    &state.config().github.secret(),
+    payload.to_vec(),
+    x_hub_signature,
+  );
+
+  if !signature {
+    error!("Signature mismatch");
+    return Err(ApiError::new("Invalid signature", 401));
+  }
+
+  let payload = serde_json::from_slice(&payload).map_err(|e| {
+    error!("Failed to parse github payload: {:?}", e);
+    ApiError::new("Failed to parse github payload", 400)
+  })?;
 
   let x_github_event = headers
     .get("X-GitHub-Event")
@@ -176,8 +205,6 @@ pub async fn handle_slack_event<S: AppState>(
     ApiError::new("Failed to parse slack payload", 400)
   })?;
 
-  info!("Received headers: {:?}", headers);
-  info!("Received slack payload: {:?}", payload);
   match payload {
     slack_models::WebookCallback::UrlVerification { challenge, .. } => {
       Ok(Json(slack_models::Response::ChallengeReply { challenge }))

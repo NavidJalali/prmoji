@@ -26,6 +26,17 @@ impl Slack {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct Github {
+  secret: String,
+}
+
+impl Github {
+  pub fn secret(&self) -> &[u8] {
+    self.secret.as_bytes()
+  }
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct Database {
   pub host: String,
   pub port: u16,
@@ -49,6 +60,7 @@ pub struct Configuration {
   pub server: Server,
   pub slack: Slack,
   pub database: Database,
+  pub github: Github,
 }
 
 impl Configuration {

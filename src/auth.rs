@@ -24,6 +24,10 @@ pub fn verify_slack_signature(
   verify_signature(secret, payload.as_bytes(), signature.as_slice())
 }
 
+pub fn verify_github_signature(secret: &[u8], message: Vec<u8>, signature: Vec<u8>) -> bool {
+  verify_signature(secret, message.as_slice(), signature.as_slice())
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
