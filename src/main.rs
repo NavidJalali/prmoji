@@ -1,10 +1,7 @@
 use std::ops::Deref;
 
 use app_state::AppState;
-use axum::{
-  routing::{get, post},
-  Router,
-};
+use axum::{routing::post, Router};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::{info, Level};
@@ -26,7 +23,6 @@ mod url_extractor;
 pub fn make_router<S: AppState>(state: S) -> Router {
   Router::new()
     .route("/slack", post(handlers::handle_slack_event::<S>))
-    .route("/", get(handlers::list::<S>))
     .route("/github", post(handlers::handle_github_event::<S>))
     .with_state(state)
     .layer(TraceLayer::new_for_http())

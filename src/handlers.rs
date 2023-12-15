@@ -40,12 +40,6 @@ impl IntoResponse for ApiError {
   }
 }
 
-pub async fn list<S: AppState>(state: State<S>) -> Json<Vec<PR>> {
-  let repo = state.pr_repository();
-  let prs = repo.list().await;
-  Json(prs)
-}
-
 pub async fn handle_github_event<S: AppState>(
   state: State<S>,
   headers: HeaderMap,
