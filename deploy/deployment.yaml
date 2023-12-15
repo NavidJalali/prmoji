@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prmoji
+  namespace: prmoji
+  labels:
+    app: prmoji
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prmoji
+  template:
+    metadata:
+      labels:
+        app: prmoji
+    spec:
+      containers:
+        - name: prmoji
+          image: ghcr.io/navidjalali/prmoji:main@sha256:7b8a1750213b7e120739cf710344e33bd27b628f5e901531b404885365542c31
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATABASE.USER
+              valueFrom:
+                secretKeyRef:
+                  name: prmoji-secret
+                  key: DATABASE.USER
+            - name: DATABASE.PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: prmoji-secret
+                  key: DATABASE.PASSWORD
+            - name: DATABASE.HOST
+              value: prmoji-database
+            - name: DATABASE.DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: prmoji-secret
+                  key: DATABASE.DATABASE
+            - name: SLACK.BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: prmoji-secret
+                  key: SLACK.BOT_TOKEN
+            - name: SLACK.SIGNING_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: prmoji-secret
+                  key: SLACK.SIGNING_SECRET
+            - name: GITHUB.SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: prmoji-secret
+                  key: GITHUB.SECRET
