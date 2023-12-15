@@ -47,7 +47,7 @@ In order to send requests to slack, you will need to provide a bot token to via 
 - Navigate back to Event Subscriptions
 - Click Enable Events
 - Fill out the URL with the same value as above
-- Under Subscribe to bot events, select message.channels and message.groups
+- Under Subscribe to bot events, select `message.channels` and `message.groups`
 - Click Install App
 - Click Add app to your workspace
 - Copy the Bot access token and expose it for the service as described above
