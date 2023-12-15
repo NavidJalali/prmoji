@@ -1,4 +1,5 @@
 # Prmoji 🍉
+
 A tiny web service that puts emojis on your Slack message when your PR is approved, commented etc. This Rust port was inspired by [this implementation by endreymarcell](https://github.com/endreymarcell/prmoji). 
 
 # How does it work?
@@ -62,3 +63,5 @@ Note: this has to be done for every repository you wish to watch.
 - Click Let me select individual events
 - Tick Issue comments, Pull requests, Pull request reviews, and Pull request review comments
 - Click Add webhook
+
+![prmoji](https://github.com/NavidJalali/prmoji/assets/5600005/e7fcfdb3-22d6-496d-8786-9fbfc087b7c1)
