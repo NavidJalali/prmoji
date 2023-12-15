@@ -7,7 +7,7 @@ use tower_http::trace::TraceLayer;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
-use crate::{app_state::TestState, config::Configuration};
+use crate::{app_state::LiveState, config::Configuration};
 
 mod app_state;
 mod auth;
@@ -40,7 +40,7 @@ async fn main() {
 
   tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
-  let state = TestState::new(&config).await;
+  let state = LiveState::new(&config).await;
 
   sqlx::migrate!("./migrations")
     .run(state.pr_repository().pool.deref())

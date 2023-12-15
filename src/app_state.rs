@@ -15,14 +15,14 @@ pub trait AppState: Clone + Send + Sync + 'static {
 }
 
 #[derive(Clone)]
-pub struct TestState {
+pub struct LiveState {
   pub clock: clock::LiveClock,
   pub slack_client: slack::LiveSlackClient,
   pub config: Configuration,
   pub pr_repository: pr_repository::LivePrRepository,
 }
 
-impl TestState {
+impl LiveState {
   pub async fn new(config: &Configuration) -> Self {
     Self {
       clock: clock::LiveClock,
@@ -33,7 +33,7 @@ impl TestState {
   }
 }
 
-impl AppState for TestState {
+impl AppState for LiveState {
   type PrRepo = pr_repository::LivePrRepository;
   fn pr_repository(&self) -> &Self::PrRepo {
     &self.pr_repository
