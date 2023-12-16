@@ -860,6 +860,7 @@ dependencies = [
  "itoa",
  "pin-project-lite",
  "tokio",
+ "want",
 ]
 
 [[package]]
@@ -1447,6 +1448,8 @@ dependencies = [
  "futures",
  "hex",
  "hmac",
+ "http-body-util",
+ "hyper 1.0.1",
  "once_cell",
  "regex",
  "reqwest",
