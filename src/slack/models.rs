@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use serde::*;
 
+use crate::config::SlackToken;
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ChannelType {
@@ -105,21 +107,43 @@ pub struct SlackResponse {
   pub error: Option<String>,
 }
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct Credentials {
-  pub bot_token: String,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Credentials {
+  StaticBotToken(String),
+  OAuthToken {
+    client_id: String,
+    client_secret: String,
+    access_token: String,
+    refresh_token: String,
+  },
 }
 
-impl std::fmt::Display for Credentials {
-  fn fmt(&self, f: &mut __private::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.bot_token)
+impl Credentials {
+  pub fn api_token(&self) -> &String {
+    match self {
+      Credentials::StaticBotToken(token) => token,
+      Credentials::OAuthToken { access_token, .. } => access_token,
+    }
   }
 }
 
 impl Credentials {
   pub fn from_config(config: &crate::config::Slack) -> Self {
-    let bot_token = config.bot_token.clone();
-    Self { bot_token }
+    let token = config.token.clone();
+    match token {
+      SlackToken::BotToken { bot_token } => Credentials::StaticBotToken(bot_token),
+      SlackToken::OAuth {
+        client_id,
+        client_secret,
+        access_token,
+        refresh_token,
+      } => Credentials::OAuthToken {
+        client_id,
+        client_secret,
+        access_token,
+        refresh_token,
+      },
+    }
   }
 }
 

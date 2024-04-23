@@ -17,8 +17,22 @@ impl Server {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Slack {
-  pub bot_token: String,
   signing_secret: String,
+  pub token: SlackToken,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(tag = "type")]
+pub enum SlackToken {
+  BotToken {
+    bot_token: String,
+  },
+  OAuth {
+    client_id: String,
+    client_secret: String,
+    access_token: String,
+    refresh_token: String,
+  },
 }
 
 impl Slack {

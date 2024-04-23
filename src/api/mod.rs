@@ -1,5 +1,5 @@
-use axum::{extract::State, Json};
-use hyper::HeaderMap;
+use axum::{extract::State, response::IntoResponse, Json};
+use hyper::{HeaderMap, StatusCode};
 use tracing::{info, warn};
 
 use crate::{
@@ -158,4 +158,9 @@ pub async fn handle_slack_webhook<S: AppState>(
       Ok(Json(slack::models::Response::Ok))
     }
   }
+}
+
+pub async fn debug(Json(payload): Json<serde_json::Value>) -> impl IntoResponse {
+  info!("Received: {:?}", payload);
+  StatusCode::INTERNAL_SERVER_ERROR
 }

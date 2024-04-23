@@ -34,9 +34,12 @@ pub fn make_router<S: AppState>(state: S) -> Router {
       api::auth::authenticate_slack_webhook::<S>,
     ));
 
+  let debug = Router::<S>::new().route("/debug", post(api::debug));
+
   Router::new()
     .merge(github)
     .merge(slack)
+    .merge(debug)
     .with_state(state)
     .layer(TraceLayer::new_for_http())
 }

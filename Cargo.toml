@@ -9,7 +9,7 @@ edition = "2021"
 async-trait = "0.1.73"
 axum = "0.7.1"
 chrono = { version = "0.4.31", features = ["serde"] }
-config = "0.13.4"
+config = "0.14.0"
 consistenttime = "0.2.0"
 dotenv = "0.15.0"
 futures = "0.3.28"
@@ -19,7 +19,7 @@ http-body-util = "0.1.0"
 hyper = { version = "1.0.1", features = ["full"] }
 once_cell = "1.18.0"
 regex = "1.9.5"
-reqwest = { version = "0.11.20", features = ["json"] }
+reqwest = { version = "0.12.4", features = ["json"] }
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.107"
 sha2 = "0.10.8"
