@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.73"
-axum = "0.7.1"
+axum = "0.8.1"
 chrono = { version = "0.4.31", features = ["serde"] }
-config = "0.14.0"
+config = "0.15.6"
 consistenttime = "0.2.0"
 dotenv = "0.15.0"
 futures = "0.3.28"
@@ -23,9 +23,9 @@ reqwest = { version = "0.12.4", features = ["json"] }
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.107"
 sha2 = "0.10.8"
-sqlx = { version = "0.7.2", features = ["uuid", "chrono", "postgres", "runtime-tokio-rustls"] }
+sqlx = { version = "0.8.3", features = ["uuid", "chrono", "postgres", "runtime-tokio-rustls"] }
 tokio = { version = "1.32.0", features = ["full"] }
-tower-http = { version = "0.5.0", features = ["trace"] }
+tower-http = { version = "0.6.2", features = ["trace"] }
 tracing = "0.1.37"
 tracing-subscriber = "0.3.17"
 uuid = { version = "1.4.1", features = ["v4", "serde"] }
