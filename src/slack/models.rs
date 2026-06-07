@@ -92,7 +92,7 @@ pub struct AddReactionRequest {
 }
 
 impl AddReactionRequest {
-  pub fn as_json(self, config: &crate::config::Emojis) -> HashMap<&'static str, String> {
+  pub fn into_map(self, config: &crate::config::Emojis) -> HashMap<&'static str, String> {
     let mut map = HashMap::new();
     map.insert("channel", self.channel.0);
     map.insert("name", config.get(self.name));

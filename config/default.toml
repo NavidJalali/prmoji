@@ -10,6 +10,13 @@ password = "deadbeef"
 database = "postgres"
 pool_size = 8
 
+[slack]
+signing_secret = "deadbeef"
+token = { type = "BotToken", bot_token = "deadbeef" }
+
+[github]
+secret = "deadbeef"
+
 [emojis]
 merged = "shipit"
 closed = "wastebasket"

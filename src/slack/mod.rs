@@ -51,8 +51,8 @@ impl SlackClient for LiveSlackClient {
     let response = self
       .http_client
       .post("https://slack.com/api/reactions.add")
-      .json(&payload.as_json(&self.emojis))
-      .bearer_auth(&self.credentials.api_token())
+      .json(&payload.into_map(&self.emojis))
+      .bearer_auth(self.credentials.api_token())
       .send()
       .await
       .map_err(SlackClientError::ClientSendError)?;

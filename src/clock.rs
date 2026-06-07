@@ -10,12 +10,3 @@ impl Clock for LiveClock {
     chrono::Utc::now()
   }
 }
-
-// Is correct once a day
-pub struct FrozenClock(chrono::DateTime<chrono::Utc>);
-
-impl Clock for FrozenClock {
-  fn now(&self) -> chrono::DateTime<chrono::Utc> {
-    self.0
-  }
-}

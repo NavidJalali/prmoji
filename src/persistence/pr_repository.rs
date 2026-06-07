@@ -89,7 +89,7 @@ impl PrRepository for LivePrRepository {
 
   async fn delete_all(&self, to_delete: ToDelete) -> () {
     if to_delete.urls.is_empty() {
-      return ();
+      return;
     } else {
       let ToDelete {
         urls,

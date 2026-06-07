@@ -4,7 +4,7 @@ use axum::{
   middleware::Next,
   response::Response,
 };
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use http_body_util::BodyExt;
 use sha2::Sha256;
 use tracing::error;
@@ -13,14 +13,14 @@ use crate::{app_state::AppState, clock::Clock};
 
 use super::models::ApiError;
 
-pub fn hmac<'a>(secret: &[u8], message: &[u8]) -> Vec<u8> {
+pub fn hmac(secret: &[u8], message: &[u8]) -> Vec<u8> {
   let mut mac = Hmac::<Sha256>::new_from_slice(secret).expect("HMAC can take key of any size");
   mac.update(message);
   let result = mac.finalize();
   result.into_bytes().to_vec()
 }
 
-pub fn verify_signature<'a>(secret: &[u8], message: &[u8], signature: &[u8]) -> bool {
+pub fn verify_signature(secret: &[u8], message: &[u8], signature: &[u8]) -> bool {
   let expected = hmac(secret, message);
   consistenttime::ct_u8_slice_eq(expected.as_slice(), signature)
 }
@@ -57,9 +57,9 @@ pub async fn authenticate_github_webhook<S: AppState>(
     .to_bytes();
 
   let signature = verify_signature(
-    &state.config().github.secret(),
-    &payload.to_vec().as_slice(),
-    &x_hub_signature.as_slice(),
+    state.config().github.secret(),
+    payload.to_vec().as_slice(),
+    x_hub_signature.as_slice(),
   );
 
   if signature {
@@ -69,7 +69,7 @@ pub async fn authenticate_github_webhook<S: AppState>(
     Ok(response)
   } else {
     error!("Signature mismatch");
-    return Err(ApiError::new("Invalid signature", 401));
+    Err(ApiError::new("Invalid signature", 401))
   }
 }
 
@@ -130,7 +130,7 @@ pub async fn authenticate_slack_webhook<S: AppState>(
   let body = format!("v0:{}:{}", x_slack_request_timestamp, message);
 
   let signature = verify_signature(
-    &state.config().slack.signing_secret(),
+    state.config().slack.signing_secret(),
     body.as_bytes(),
     x_slack_signature.as_slice(),
   );
@@ -141,7 +141,7 @@ pub async fn authenticate_slack_webhook<S: AppState>(
     Ok(response)
   } else {
     error!("Signature mismatch");
-    return Err(ApiError::new("Invalid signature", 401));
+    Err(ApiError::new("Invalid signature", 401))
   }
 }
 

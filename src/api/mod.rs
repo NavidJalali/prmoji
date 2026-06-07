@@ -30,7 +30,7 @@ pub async fn handle_github_webhook<S: AppState>(
     .get("X-GitHub-Event")
     .ok_or(ApiError::new("Missing X-GitHub-Event header", 400))?
     .to_str()
-    .map(|raw| github::EventTypeHeader::from_raw(raw))
+    .map(github::EventTypeHeader::from_raw)
     .map_err(|_| ApiError::new("Invalid X-GitHub-Event header", 400))?;
 
   // If None we are not interested in this event

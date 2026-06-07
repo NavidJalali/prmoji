@@ -2,6 +2,7 @@ use std::ops::Deref;
 
 use app_state::AppState;
 use axum::{middleware::from_fn_with_state, routing::post, Router};
+use std::io::*;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::{info, Level};
@@ -45,10 +46,10 @@ pub fn make_router<S: AppState>(state: S) -> Router {
 }
 
 #[tokio::main]
-async fn main() {
-  dotenv::dotenv().ok();
-
-  let config = Configuration::new().unwrap();
+async fn main() -> Result<()> {
+  let config = Configuration::new().map_err(|config_error| {
+    Error::other(format!("Failed to load configuration: {:?}", config_error))
+  })?;
 
   let subscriber = FmtSubscriber::builder()
     .with_max_level(Level::DEBUG)
@@ -61,15 +62,17 @@ async fn main() {
   sqlx::migrate!("./migrations")
     .run(state.pr_repository().pool.deref())
     .await
-    .unwrap();
+    .map_err(|migrate_error| {
+      Error::other(format!("Failed to run migrations: {:?}", migrate_error))
+    })?;
 
   let app = make_router(state);
 
-  let listener = TcpListener::bind(&config.server.addr()).await.unwrap();
+  let listener = TcpListener::bind(&config.server.addr()).await?;
 
-  info!("Listening on {:?}", listener.local_addr().unwrap());
+  info!("Listening on {:?}", listener.local_addr()?);
 
-  axum::serve(listener, app.into_make_service())
-    .await
-    .unwrap();
+  axum::serve(listener, app.into_make_service()).await?;
+
+  Ok(())
 }
